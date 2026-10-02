@@ -1,0 +1,48 @@
+// app/src/main/java/com/meshguard/app/data/repository/FakeMedicalIdRepository.kt
+package com.meshguard.app.data.repository
+
+import com.meshguard.app.data.model.MedicalRecord
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+
+/**
+ * In-memory fake repository implementation for Encrypted Medical ID.
+ * Supports locked/unlocked toggle and rescue worker token verification.
+ */
+class FakeMedicalIdRepository : FakeMedicalIdRepositoryInternal()
+
+open class FakeMedicalIdRepositoryInternal : MedicalIdRepository {
+
+    // BACKEND HOOK: Load from Android Keystore authenticated encrypted preference
+    private val _medicalRecord = MutableStateFlow(
+        MedicalRecord(
+            bloodType = "O+",
+            allergies = listOf("Penicillin", "Latex"),
+            chronicConditions = listOf("Type-1 Diabetes", "Asthma"),
+            emergencyContactName = "Sarah Rivera",
+            emergencyContactRelation = "Spouse (Phone: +1 555-0192)",
+            isEncrypted = true,
+            encryptedPayloadPreview = "AES256-GCM::9d84f1a0e37bc281...f77a"
+        )
+    )
+    override val medicalRecord: StateFlow<MedicalRecord> = _medicalRecord.asStateFlow()
+
+    override fun updateMedicalRecord(record: MedicalRecord) {
+        _medicalRecord.value = record
+    }
+
+    override fun toggleEncryption(enable: Boolean) {
+        _medicalRecord.update { it.copy(isEncrypted = enable) }
+    }
+
+    override fun unlockWithRescuerToken(tokenCode: String): Boolean {
+        // BACKEND HOOK: Decrypt symmetric ciphertext with Rescuer public key or NFC badge handshake
+        if (tokenCode.trim() == "RESCUE-2024" || tokenCode.trim().length >= 4) {
+            _medicalRecord.update { it.copy(isEncrypted = false) }
+            return true
+        }
+        return false
+    }
+}

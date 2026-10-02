@@ -1,0 +1,273 @@
+# MeshGuard — Gradle Setup & AndroidManifest Configuration
+
+Below are the 4 complete, production-ready configuration files for MeshGuard adhering strictly to minSdk 26, targetSdk 34, Kotlin 1.9.22, Compose BOM 2024.02.00, and comprehensive Android permission declarations.
+
+---
+
+### File 1: `gradle/libs.versions.toml`
+```toml
+# gradle/libs.versions.toml
+[versions]
+agp = "8.2.2"
+kotlin = "1.9.22"
+coreKtx = "1.12.0"
+lifecycleRuntimeKtx = "2.7.0"
+lifecycleViewModelCompose = "2.7.0"
+activityCompose = "1.8.2"
+composeBom = "2024.02.00"
+navigationCompose = "2.7.7"
+coroutines = "1.7.3"
+
+[libraries]
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleViewModelCompose" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+
+# Compose BOM & UI
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
+
+# Navigation Compose
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+
+# Kotlin Coroutines
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+```
+
+---
+
+### File 2: `build.gradle.kts` (Project Root)
+```kotlin
+// build.gradle.kts
+plugins {
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.kotlin.android) apply false
+}
+```
+
+---
+
+### File 3: `app/build.gradle.kts` (Module: app)
+```kotlin
+// app/build.gradle.kts
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+}
+
+android {
+    namespace = "com.meshguard.app"
+    compileSdk = 34
+
+    defaultConfig {
+        applicationId = "com.meshguard.app"
+        minSdk = 26
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0.0"
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary = true
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+        debug {
+            isMinifyEnabled = false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+        freeCompilerArgs += listOf(
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
+            "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi"
+        )
+    }
+
+    buildFeatures {
+        compose = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.8"
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+}
+
+dependencies {
+    // AndroidX & Lifecycle
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.activity.compose)
+
+    // Jetpack Compose & Material 3 (via BOM 2024.02.00)
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.extended)
+
+    // Navigation Compose
+    implementation(libs.androidx.navigation.compose)
+
+    // Coroutines
+    implementation(libs.kotlinx.coroutines.android)
+
+    // Debugging Tools
+    debugImplementation(libs.androidx.compose.ui.tooling)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+```
+
+---
+
+### File 4: `app/src/main/AndroidManifest.xml`
+```xml
+<!-- app/src/main/AndroidManifest.xml -->
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- =================================================================== -->
+    <!-- HARDWARE CAPABILITIES                                              -->
+    <!-- Required false so tablets/devices without BLE can still run offline -->
+    <!-- =================================================================== -->
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.wifi.direct"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.microphone"
+        android:required="false" />
+
+    <!-- =================================================================== -->
+    <!-- BLUETOOTH PERMISSIONS                                              -->
+    <!-- Android 12+ (API 31+) granular permissions                          -->
+    <!-- =================================================================== -->
+    <!-- neverForLocation informs OS that BLE scanning is for mesh peer discovery, not physical tracking -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="s" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADVERTISE"
+        tools:targetApi="s" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_CONNECT"
+        tools:targetApi="s" />
+
+    <!-- Legacy Bluetooth for Android 8.0 - 11 (API 26-30) -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+
+    <!-- =================================================================== -->
+    <!-- LOCATION PERMISSIONS                                                -->
+    <!-- Required for Bluetooth LE & Wi-Fi Direct scanning on API 26-30 only -->
+    <!-- =================================================================== -->
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.ACCESS_COARSE_LOCATION"
+        android:maxSdkVersion="30" />
+
+    <!-- =================================================================== -->
+    <!-- WI-FI DIRECT / NEARBY PERMISSIONS                                   -->
+    <!-- Android 13+ (API 33+) Wi-Fi Direct peer-to-peer discovery           -->
+    <!-- =================================================================== -->
+    <uses-permission
+        android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="tiramisu" />
+
+    <!-- Legacy Wi-Fi state for Wi-Fi Direct on API 26-32 -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+
+    <!-- =================================================================== -->
+    <!-- VOICE-DROP RELAY & EMERGENCY AUDIO                                 -->
+    <!-- =================================================================== -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- =================================================================== -->
+    <!-- SYSTEM & BACKGROUND BROADCAST                                       -->
+    <!-- =================================================================== -->
+    <!-- Android 13+ (API 33+) incoming relay and triage alert notifications -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Keeps radio transceiver alive during active SOS beacon broadcast -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Vibrate for tactile feedback in darkness / low visibility -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application
+        android:name=".MeshGuardApp"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.MeshGuard">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.MeshGuard"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- BACKEND HOOK: Background Mesh Relay Service for opportunistic BLE/Nearby packet gossip -->
+        <!--
+        <service
+            android:name=".data.service.MeshRelayService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
+        -->
+
+    </application>
+
+</manifest>
+```

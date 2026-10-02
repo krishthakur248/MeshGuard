@@ -1,0 +1,40 @@
+// app/src/main/java/com/meshguard/app/ui/AppState.kt
+package com.meshguard.app.ui
+
+import com.meshguard.app.data.model.UserRole
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+/**
+ * Lightweight global app state holder managing selected UserRole and authentication state.
+ * Simple in-memory singleton for the frontend-only demonstration.
+ */
+object AppStateManager {
+
+    // BACKEND HOOK: Store in EncryptedSharedPreferences or DataStore
+    private val _userRole = MutableStateFlow(UserRole.SURVIVOR)
+    val userRole: StateFlow<UserRole> = _userRole.asStateFlow()
+
+    private val _rescuerToken = MutableStateFlow<String?>(null)
+    val rescuerToken: StateFlow<String?> = _rescuerToken.asStateFlow()
+
+    private val _hasCompletedOnboarding = MutableStateFlow(false)
+    val hasCompletedOnboarding: StateFlow<Boolean> = _hasCompletedOnboarding.asStateFlow()
+
+    private val _hasGrantedPermissions = MutableStateFlow(false)
+    val hasGrantedPermissions: StateFlow<Boolean> = _hasGrantedPermissions.asStateFlow()
+
+    fun setUserRole(role: UserRole, token: String? = null) {
+        _userRole.value = role
+        _rescuerToken.value = token
+    }
+
+    fun completeOnboarding() {
+        _hasCompletedOnboarding.value = true
+    }
+
+    fun setPermissionsGranted(granted: Boolean) {
+        _hasGrantedPermissions.value = granted
+    }
+}

@@ -1,0 +1,125 @@
+// app/src/main/java/com/meshguard/app/data/repository/FakeMeshRepository.kt
+package com.meshguard.app.data.repository
+
+import com.meshguard.app.data.model.HistoryNode
+import com.meshguard.app.data.model.MeshPeer
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+
+/**
+ * In-memory fake repository implementation for opportunistic mesh networking.
+ * Pre-populated with realistic peer and breadcrumb chain data.
+ */
+class FakeMeshRepository : MeshRepository {
+
+    // BACKEND HOOK: Replace with Google Nearby Connections / BLE Scanner callbacks
+    private val _nearbyPeers = MutableStateFlow<List<MeshPeer>>(
+        listOf(
+            MeshPeer(
+                peerId = "peer-alpha-01",
+                alias = "Mule Relay #04",
+                rssi = -64,
+                packetsCarried = 24,
+                isDirectConnection = true,
+                lastSyncAgoSec = 4
+            ),
+            MeshPeer(
+                peerId = "peer-bravo-02",
+                alias = "Search Team Echo",
+                rssi = -72,
+                packetsCarried = 58,
+                isDirectConnection = true,
+                lastSyncAgoSec = 11
+            ),
+            MeshPeer(
+                peerId = "peer-charlie-03",
+                alias = "Citizen Node #C9",
+                rssi = -86,
+                packetsCarried = 6,
+                isDirectConnection = false,
+                lastSyncAgoSec = 35
+            ),
+            MeshPeer(
+                peerId = "peer-delta-04",
+                alias = "Medic Field Station",
+                rssi = -59,
+                packetsCarried = 112,
+                isDirectConnection = true,
+                lastSyncAgoSec = 2
+            ),
+            MeshPeer(
+                peerId = "peer-echo-05",
+                alias = "Shelter Gate 2",
+                rssi = -91,
+                packetsCarried = 19,
+                isDirectConnection = false,
+                lastSyncAgoSec = 62
+            )
+        )
+    )
+    override val nearbyPeers: StateFlow<List<MeshPeer>> = _nearbyPeers.asStateFlow()
+
+    // BACKEND HOOK: Track SQLite/Room epidemic store packet count
+    private val _packetsCarriedCount = MutableStateFlow(28)
+    override val packetsCarriedCount: StateFlow<Int> = _packetsCarriedCount.asStateFlow()
+
+    // BACKEND HOOK: Connect to BluetoothLeAdvertiser / Nearby Advertise state
+    private val _isBroadcastingBeacon = MutableStateFlow(true)
+    override val isBroadcastingBeacon: StateFlow<Boolean> = _isBroadcastingBeacon.asStateFlow()
+
+    // BACKEND HOOK: Sync with Android PowerManager / BLE duty cycle manager
+    private val _isBatterySaverActive = MutableStateFlow(true)
+    override val isBatterySaverActive: StateFlow<Boolean> = _isBatterySaverActive.asStateFlow()
+
+    // BACKEND HOOK: Populate from hop-by-hop gossip packet header trail
+    private val _breadcrumbChain = MutableStateFlow<List<HistoryNode>>(
+        listOf(
+            HistoryNode(
+                deviceAlias = "Stationary Beacon SEC-4B",
+                lastSeenTimestamp = System.currentTimeMillis() - 1800000L, // 30m ago
+                signalStrengthRssi = -55,
+                hopIndex = 0
+            ),
+            HistoryNode(
+                deviceAlias = "Volunteer Mule #12",
+                lastSeenTimestamp = System.currentTimeMillis() - 900000L, // 15m ago
+                signalStrengthRssi = -68,
+                hopIndex = 1
+            ),
+            HistoryNode(
+                deviceAlias = "Citizen Phone (Marcus C.)",
+                lastSeenTimestamp = System.currentTimeMillis() - 360000L, // 6m ago
+                signalStrengthRssi = -74,
+                hopIndex = 2
+            ),
+            HistoryNode(
+                deviceAlias = "This Device (Local Gateway)",
+                lastSeenTimestamp = System.currentTimeMillis(),
+                signalStrengthRssi = -61,
+                hopIndex = 3
+            )
+        )
+    )
+    override val breadcrumbChain: StateFlow<List<HistoryNode>> = _breadcrumbChain.asStateFlow()
+
+    override fun toggleBroadcast(enable: Boolean?) {
+        _isBroadcastingBeacon.update { current -> enable ?: !current }
+    }
+
+    override fun setBatterySaver(enabled: Boolean) {
+        _isBatterySaverActive.value = enabled
+    }
+
+    override fun simulateIncomingPeer(peer: MeshPeer) {
+        _nearbyPeers.update { currentList ->
+            listOf(peer) + currentList.filterNot { it.peerId == peer.peerId }
+        }
+        _packetsCarriedCount.update { it + peer.packetsCarried }
+    }
+
+    override fun recordContactHop(node: HistoryNode) {
+        _breadcrumbChain.update { it + node }
+    }
+}

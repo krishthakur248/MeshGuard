@@ -1,0 +1,172 @@
+// app/src/main/java/com/meshguard/app/ui/components/AudioWaveformPreview.kt
+package com.meshguard.app.ui.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.meshguard.app.R
+import com.meshguard.app.ui.theme.ColorBackgroundDark
+import com.meshguard.app.ui.theme.ColorSurfaceBorder
+import com.meshguard.app.ui.theme.ColorSurfaceDark
+import com.meshguard.app.ui.theme.ColorSurfaceElevatedDark
+import com.meshguard.app.ui.theme.MeshCyan
+import com.meshguard.app.ui.theme.TextMuted
+import com.meshguard.app.ui.theme.TextPrimary
+import com.meshguard.app.ui.theme.TextSecondary
+
+/**
+ * 15-second emergency voice memo waveform preview and player control.
+ * Has minimum 56dp accessible tap targets, dual visual cues (play icon + duration label),
+ * and audio wave amplitude bars.
+ */
+@Composable
+fun AudioWaveformPreview(
+    durationSec: Int,
+    isPlaying: Boolean,
+    onTogglePlay: () -> Unit,
+    modifier: Modifier = Modifier,
+    playedProgressFraction: Float = 0.35f,
+    activeColor: Color = MeshCyan
+) {
+    // 20 normalized amplitude bar heights representing a 15-second voice snippet
+    val waveAmplitudes = listOf(
+        0.30f, 0.45f, 0.70f, 0.90f, 0.55f,
+        0.40f, 0.85f, 1.00f, 0.65f, 0.35f,
+        0.50f, 0.75f, 0.95f, 0.60f, 0.40f,
+        0.80f, 0.50f, 0.35f, 0.60f, 0.25f
+    )
+
+    val playActionDesc = if (isPlaying) {
+        stringResource(R.string.audio_pause_desc)
+    } else {
+        stringResource(R.string.audio_play_desc)
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(ColorSurfaceDark)
+            .border(1.dp, ColorSurfaceBorder, RoundedCornerShape(8.dp))
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Minimum 56dp play/pause target
+        IconButton(
+            onClick = onTogglePlay,
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(ColorSurfaceElevatedDark)
+                .semantics {
+                    contentDescription = "$playActionDesc ($durationSec seconds)"
+                    role = Role.Button
+                }
+        ) {
+            Icon(
+                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                contentDescription = null,
+                tint = activeColor,
+                modifier = Modifier.size(28.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // Waveform bars with progress coloration
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(28.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                waveAmplitudes.forEachIndexed { index, amplitude ->
+                    val barFraction = index.toFloat() / waveAmplitudes.size
+                    val isBarPlayed = barFraction <= playedProgressFraction
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height((28.dp * amplitude).coerceAtLeast(4.dp))
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(if (isBarPlayed) activeColor else ColorSurfaceBorder)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.audio_memo_label),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary
+                )
+                Text(
+                    text = stringResource(R.string.audio_duration_format, durationSec),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    color = activeColor
+                )
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun AudioWaveformPreviewPreview() {
+    Surface(color = ColorBackgroundDark) {
+        Box(modifier = Modifier.padding(16.dp)) {
+            AudioWaveformPreview(
+                durationSec = 14,
+                isPlaying = false,
+                onTogglePlay = {},
+                playedProgressFraction = 0.40f
+            )
+        }
+    }
+}

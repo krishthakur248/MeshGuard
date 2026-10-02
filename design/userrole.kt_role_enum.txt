@@ -1,0 +1,10 @@
+// app/src/main/java/com/meshguard/app/data/model/UserRole.kt
+package com.meshguard.app.data.model
+
+/**
+ * Operating role selected during onboarding.
+ */
+enum class UserRole {
+    SURVIVOR,
+    RESCUER
+}

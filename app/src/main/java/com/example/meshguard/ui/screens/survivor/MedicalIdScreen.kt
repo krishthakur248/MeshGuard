@@ -1,0 +1,1365 @@
+package com.example.meshguard.ui.screens.survivor
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Bloodtype
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContactPhone
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Healing
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.MedicalServices
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.meshguard.R
+import com.example.meshguard.data.model.MedicalRecord
+import com.example.meshguard.ui.components.SectionHeader
+import com.example.meshguard.ui.theme.ColorBackgroundDark
+import com.example.meshguard.ui.theme.ColorSurfaceBorder
+import com.example.meshguard.ui.theme.ColorSurfaceDark
+import com.example.meshguard.ui.theme.ColorSurfaceElevatedDark
+import com.example.meshguard.ui.theme.EmergencyGreen
+import com.example.meshguard.ui.theme.EmergencyOrange
+import com.example.meshguard.ui.theme.EmergencyRed
+import com.example.meshguard.ui.theme.EmergencyYellow
+import com.example.meshguard.ui.theme.MeshCyan
+import com.example.meshguard.ui.theme.RescuerBadgeBlue
+import com.example.meshguard.ui.theme.TextMuted
+import com.example.meshguard.ui.theme.TextPrimary
+import com.example.meshguard.ui.theme.TextSecondary
+import com.example.meshguard.ui.viewmodel.MedicalIdUiState
+import com.example.meshguard.ui.viewmodel.MedicalIdViewModel
+
+@Composable
+fun MedicalIdRoute(
+    onNavigateBack: () -> Unit,
+    viewModel: MedicalIdViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    MedicalIdScreen(
+        uiState = uiState,
+        onNavigateBack = onNavigateBack,
+        onToggleRescuerSimulation = viewModel::onSimulateRescuerToggle,
+        onToggleEdit = viewModel::onToggleEditMode,
+        onNameChanged = viewModel::onNameChanged,
+        onAgeChanged = viewModel::onAgeChanged,
+        onBloodTypeSelected = viewModel::onBloodTypeSelected,
+        onEmergencyContactNameChanged = viewModel::onEmergencyContactNameChanged,
+        onEmergencyContactRelationChanged = viewModel::onEmergencyContactRelationChanged,
+        onNewAllergyTextChanged = viewModel::onNewAllergyTextChanged,
+        onAddAllergy = viewModel::onAddAllergy,
+        onRemoveAllergy = viewModel::onRemoveAllergy,
+        onNewConditionTextChanged = viewModel::onNewConditionTextChanged,
+        onAddCondition = viewModel::onAddCondition,
+        onRemoveCondition = viewModel::onRemoveCondition,
+        onSaveRecord = viewModel::onSaveRecord
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MedicalIdScreen(
+    uiState: MedicalIdUiState,
+    onNavigateBack: () -> Unit,
+    onToggleRescuerSimulation: (Boolean) -> Unit,
+    onToggleEdit: (Boolean) -> Unit,
+    onNameChanged: (String) -> Unit,
+    onAgeChanged: (String) -> Unit,
+    onBloodTypeSelected: (String) -> Unit,
+    onEmergencyContactNameChanged: (String) -> Unit,
+    onEmergencyContactRelationChanged: (String) -> Unit,
+    onNewAllergyTextChanged: (String) -> Unit,
+    onAddAllergy: () -> Unit,
+    onRemoveAllergy: (String) -> Unit,
+    onNewConditionTextChanged: (String) -> Unit,
+    onAddCondition: () -> Unit,
+    onRemoveCondition: (String) -> Unit,
+    onSaveRecord: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val scrollState = rememberScrollState()
+
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        containerColor = ColorBackgroundDark,
+        topBar = {
+            TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = ColorSurfaceDark,
+                    titleContentColor = TextPrimary,
+                    navigationIconContentColor = TextPrimary,
+                    actionIconContentColor = MeshCyan
+                ),
+                navigationIcon = {
+                    IconButton(
+                        onClick = onNavigateBack,
+                        modifier = Modifier.size(56.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back),
+                            tint = TextPrimary
+                        )
+                    }
+                },
+                title = {
+                    Column {
+                        Text(
+                            text = "ENCRYPTED MEDICAL ID",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 0.5.sp
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(if (uiState.isLocked) MeshCyan else EmergencyGreen)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (uiState.isLocked) "AES-256 Protected • Locked" else "Authenticated Rescuer Decryption Active",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontFamily = FontFamily.Monospace,
+                                color = if (uiState.isLocked) MeshCyan else EmergencyGreen
+                            )
+                        }
+                    }
+                },
+                actions = {
+                    if (!uiState.isLocked) {
+                        IconButton(
+                            onClick = { onToggleEdit(!uiState.isEditing) },
+                            modifier = Modifier.size(56.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (uiState.isEditing) Icons.Default.Close else Icons.Default.Edit,
+                                contentDescription = if (uiState.isEditing) "Cancel editing" else "Edit medical ID",
+                                tint = MeshCyan
+                            )
+                        }
+                    }
+                }
+            )
+        },
+        bottomBar = {
+            if (uiState.isEditing) {
+                Surface(
+                    color = ColorSurfaceDark,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, ColorSurfaceBorder)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 12.dp)
+                    ) {
+                        Button(
+                            onClick = onSaveRecord,
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MeshCyan,
+                                contentColor = Color.Black
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Save,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "SAVE & ENCRYPT MEDICAL RECORD",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Black,
+                                    letterSpacing = 0.5.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(scrollState)
+                .padding(horizontal = 20.dp, vertical = 14.dp)
+        ) {
+            RescuerSimulationBanner(
+                isSimulated = uiState.isRescuerSimulatedInRange,
+                onToggle = onToggleRescuerSimulation
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (uiState.isLocked) {
+                LockedMedicalIdView(
+                    encryptedPayload = uiState.record.encryptedPayloadPreview,
+                    onSimulateUnlock = { onToggleRescuerSimulation(true) }
+                )
+            } else {
+                if (uiState.isEditing) {
+                    EditMedicalIdView(
+                        name = uiState.nameInput,
+                        age = uiState.ageInput,
+                        bloodType = uiState.bloodTypeInput,
+                        allergies = uiState.allergiesInput,
+                        conditions = uiState.conditionsInput,
+                        contactName = uiState.emergencyContactNameInput,
+                        contactRelation = uiState.emergencyContactRelationInput,
+                        newAllergyText = uiState.newAllergyText,
+                        newConditionText = uiState.newConditionText,
+                        onNameChanged = onNameChanged,
+                        onAgeChanged = onAgeChanged,
+                        onBloodTypeSelected = onBloodTypeSelected,
+                        onEmergencyContactNameChanged = onEmergencyContactNameChanged,
+                        onEmergencyContactRelationChanged = onEmergencyContactRelationChanged,
+                        onNewAllergyTextChanged = onNewAllergyTextChanged,
+                        onAddAllergy = onAddAllergy,
+                        onRemoveAllergy = onRemoveAllergy,
+                        onNewConditionTextChanged = onNewConditionTextChanged,
+                        onAddCondition = onAddCondition,
+                        onRemoveCondition = onRemoveCondition
+                    )
+                } else {
+                    UnlockedMedicalIdView(
+                        record = uiState.record,
+                        onEditClicked = { onToggleEdit(true) }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun RescuerSimulationBanner(
+    isSimulated: Boolean,
+    onToggle: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = ColorSurfaceElevatedDark),
+        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (isSimulated) EmergencyGreen.copy(alpha = 0.5f) else ColorSurfaceBorder
+        ),
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics {
+                contentDescription = "Simulate rescuer in range is ${if (isSimulated) "active" else "disabled"}."
+            }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(68.dp)
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(if (isSimulated) EmergencyGreen.copy(alpha = 0.15f) else ColorSurfaceDark)
+                        .border(1.dp, if (isSimulated) EmergencyGreen else ColorSurfaceBorder, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isSimulated) Icons.Default.LockOpen else Icons.Default.Key,
+                        contentDescription = null,
+                        tint = if (isSimulated) EmergencyGreen else RescuerBadgeBlue,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "SIMULATE RESCUER IN RANGE",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 0.8.sp,
+                            color = TextPrimary
+                        )
+                    }
+                    Text(
+                        text = if (isSimulated) "Authenticated rescuer token active" else "Toggle to test responder field decryption",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
+            }
+
+            Switch(
+                checked = isSimulated,
+                onCheckedChange = onToggle,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.Black,
+                    checkedTrackColor = EmergencyGreen,
+                    uncheckedThumbColor = TextMuted,
+                    uncheckedTrackColor = ColorSurfaceDark
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun LockedMedicalIdView(
+    encryptedPayload: String,
+    onSimulateUnlock: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = ColorSurfaceDark),
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, ColorSurfaceBorder),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(CircleShape)
+                        .background(ColorSurfaceElevatedDark)
+                        .border(2.dp, MeshCyan.copy(alpha = 0.6f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = null,
+                        tint = MeshCyan,
+                        modifier = Modifier.size(40.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "RECORD ENCRYPTED (AES-256)",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Black,
+                    color = TextPrimary,
+                    letterSpacing = 0.5.sp
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "To protect survivor privacy, chronic conditions, blood type, and emergency contacts are encrypted on-device. This payload is automatically decrypted over peer BLE only when an authenticated Rescue Worker badge is in proximity.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 21.sp
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = ColorSurfaceElevatedDark,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, ColorSurfaceBorder),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "OFFLINE BROADCAST PAYLOAD",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontFamily = FontFamily.Monospace,
+                                color = TextMuted
+                            )
+                            Text(
+                                text = "GCM-TAG VERIFIED",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontFamily = FontFamily.Monospace,
+                                color = EmergencyGreen
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Text(
+                            text = encryptedPayload,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold,
+                            color = MeshCyan,
+                            letterSpacing = 1.sp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                OutlinedButton(
+                    onClick = onSimulateUnlock,
+                    shape = RoundedCornerShape(8.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, RescuerBadgeBlue),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = ColorSurfaceElevatedDark,
+                        contentColor = RescuerBadgeBlue
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Key,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "SIMULATE RESCUER KEY UNLOCK",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun UnlockedMedicalIdView(
+    record: MedicalRecord,
+    onEditClicked: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Name and Age Card
+        Card(
+            colors = CardDefaults.cardColors(containerColor = ColorSurfaceDark),
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, ColorSurfaceBorder),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(54.dp)
+                        .clip(CircleShape)
+                        .background(MeshCyan.copy(alpha = 0.15f))
+                        .border(1.5.dp, MeshCyan, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = null,
+                        tint = MeshCyan,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "SURVIVOR IDENTITY",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = TextMuted,
+                        letterSpacing = 1.sp
+                    )
+                    Text(
+                        text = record.name.ifBlank { "Unspecified Name" },
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Black,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "Age: ${if (record.age > 0) record.age else "Unspecified"}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
+                }
+            }
+        }
+
+        // Blood Type Card
+        Card(
+            colors = CardDefaults.cardColors(containerColor = ColorSurfaceDark),
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, ColorSurfaceBorder),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(54.dp)
+                        .clip(CircleShape)
+                        .background(EmergencyRed.copy(alpha = 0.15f))
+                        .border(1.5.dp, EmergencyRed, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Bloodtype,
+                        contentDescription = null,
+                        tint = EmergencyRed,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "BLOOD TYPE",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = TextMuted,
+                        letterSpacing = 1.sp
+                    )
+                    Text(
+                        text = record.bloodType,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Black,
+                        color = EmergencyRed
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = EmergencyGreen.copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        text = "UNLOCKED",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Black,
+                        color = EmergencyGreen,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = ColorSurfaceDark),
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, ColorSurfaceBorder),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                SectionHeader(
+                    title = "Severe Allergies",
+                    icon = Icons.Default.Warning,
+                    iconTint = EmergencyOrange,
+                    badgeText = "${record.allergies.size} Recorded",
+                    badgeColor = EmergencyOrange
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                if (record.allergies.isEmpty()) {
+                    Text(
+                        text = "No known allergies listed.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextMuted
+                    )
+                } else {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        record.allergies.forEach { allergy ->
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = EmergencyOrange.copy(alpha = 0.15f),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, EmergencyOrange.copy(alpha = 0.6f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = EmergencyOrange,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = allergy,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = ColorSurfaceDark),
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, ColorSurfaceBorder),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                SectionHeader(
+                    title = "Chronic Medical Conditions",
+                    icon = Icons.Default.MedicalServices,
+                    iconTint = EmergencyYellow,
+                    badgeText = "${record.chronicConditions.size} Recorded",
+                    badgeColor = EmergencyYellow
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                if (record.chronicConditions.isEmpty()) {
+                    Text(
+                        text = "No chronic conditions recorded.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextMuted
+                    )
+                } else {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        record.chronicConditions.forEach { condition ->
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = EmergencyYellow.copy(alpha = 0.15f),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, EmergencyYellow.copy(alpha = 0.6f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Healing,
+                                        contentDescription = null,
+                                        tint = EmergencyYellow,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = condition,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = ColorSurfaceDark),
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, ColorSurfaceBorder),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                SectionHeader(
+                    title = "Emergency Contact",
+                    icon = Icons.Default.ContactPhone,
+                    iconTint = MeshCyan
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(ColorSurfaceElevatedDark),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            tint = MeshCyan,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column {
+                        Text(
+                            text = record.emergencyContactName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = record.emergencyContactRelation,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondary
+                        )
+                    }
+                }
+            }
+        }
+
+        Button(
+            onClick = onEditClicked,
+            shape = RoundedCornerShape(10.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = ColorSurfaceElevatedDark,
+                contentColor = TextPrimary
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .border(1.dp, ColorSurfaceBorder, RoundedCornerShape(10.dp))
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = null,
+                    tint = MeshCyan,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "EDIT MEDICAL PROFILE",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@Composable
+private fun EditMedicalIdView(
+    name: String,
+    age: String,
+    bloodType: String,
+    allergies: List<String>,
+    conditions: List<String>,
+    contactName: String,
+    contactRelation: String,
+    newAllergyText: String,
+    newConditionText: String,
+    onNameChanged: (String) -> Unit,
+    onAgeChanged: (String) -> Unit,
+    onBloodTypeSelected: (String) -> Unit,
+    onEmergencyContactNameChanged: (String) -> Unit,
+    onEmergencyContactRelationChanged: (String) -> Unit,
+    onNewAllergyTextChanged: (String) -> Unit,
+    onAddAllergy: () -> Unit,
+    onRemoveAllergy: (String) -> Unit,
+    onNewConditionTextChanged: (String) -> Unit,
+    onAddCondition: () -> Unit,
+    onRemoveCondition: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val bloodTypes = listOf("O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-", "Unknown")
+    var bloodTypeExpanded by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Name and Age Fields
+        Card(
+            colors = CardDefaults.cardColors(containerColor = ColorSurfaceDark),
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, ColorSurfaceBorder),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "SURVIVOR IDENTITY (REQUIRED)",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MeshCyan,
+                    letterSpacing = 0.8.sp
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = onNameChanged,
+                    label = { Text("Full Name") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Person, contentDescription = null, tint = MeshCyan)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MeshCyan,
+                        unfocusedBorderColor = ColorSurfaceBorder,
+                        focusedContainerColor = ColorSurfaceElevatedDark,
+                        unfocusedContainerColor = ColorSurfaceElevatedDark,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedTextField(
+                    value = age,
+                    onValueChange = onAgeChanged,
+                    label = { Text("Age") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Person, contentDescription = null, tint = MeshCyan)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MeshCyan,
+                        unfocusedBorderColor = ColorSurfaceBorder,
+                        focusedContainerColor = ColorSurfaceElevatedDark,
+                        unfocusedContainerColor = ColorSurfaceElevatedDark,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                )
+            }
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = ColorSurfaceDark),
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, ColorSurfaceBorder),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "BLOOD TYPE",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MeshCyan,
+                    letterSpacing = 0.8.sp
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                ExposedDropdownMenuBox(
+                    expanded = bloodTypeExpanded,
+                    onExpandedChange = { bloodTypeExpanded = !bloodTypeExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = bloodType,
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = bloodTypeExpanded) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Bloodtype,
+                                contentDescription = null,
+                                tint = EmergencyRed
+                            )
+                        },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MeshCyan,
+                            unfocusedBorderColor = ColorSurfaceBorder,
+                            focusedContainerColor = ColorSurfaceElevatedDark,
+                            unfocusedContainerColor = ColorSurfaceElevatedDark,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = bloodTypeExpanded,
+                        onDismissRequest = { bloodTypeExpanded = false },
+                        modifier = Modifier.background(ColorSurfaceDark)
+                    ) {
+                        bloodTypes.forEach { type ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = type,
+                                        fontWeight = if (type == bloodType) FontWeight.Black else FontWeight.Normal,
+                                        color = if (type == bloodType) EmergencyRed else TextPrimary
+                                    )
+                                },
+                                onClick = {
+                                    onBloodTypeSelected(type)
+                                    bloodTypeExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = ColorSurfaceDark),
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, ColorSurfaceBorder),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "SEVERE ALLERGIES",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = EmergencyOrange,
+                    letterSpacing = 0.8.sp
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    allergies.forEach { allergy ->
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = EmergencyOrange.copy(alpha = 0.2f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, EmergencyOrange)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(start = 10.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = allergy,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                IconButton(
+                                    onClick = { onRemoveAllergy(allergy) },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Remove $allergy",
+                                        tint = EmergencyOrange,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = newAllergyText,
+                        onValueChange = onNewAllergyTextChanged,
+                        placeholder = { Text("Add allergy (e.g. Latex)", color = TextMuted) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { onAddAllergy() }),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = EmergencyOrange,
+                            unfocusedBorderColor = ColorSurfaceBorder,
+                            focusedContainerColor = ColorSurfaceElevatedDark,
+                            unfocusedContainerColor = ColorSurfaceElevatedDark,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    IconButton(
+                        onClick = onAddAllergy,
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(EmergencyOrange.copy(alpha = 0.2f))
+                            .border(1.dp, EmergencyOrange, RoundedCornerShape(8.dp))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add allergy",
+                            tint = EmergencyOrange
+                        )
+                    }
+                }
+            }
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = ColorSurfaceDark),
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, ColorSurfaceBorder),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "CHRONIC MEDICAL CONDITIONS",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = EmergencyYellow,
+                    letterSpacing = 0.8.sp
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    conditions.forEach { condition ->
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = EmergencyYellow.copy(alpha = 0.2f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, EmergencyYellow)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(start = 10.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = condition,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                IconButton(
+                                    onClick = { onRemoveCondition(condition) },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Remove $condition",
+                                        tint = EmergencyYellow,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = newConditionText,
+                        onValueChange = onNewConditionTextChanged,
+                        placeholder = { Text("Add condition (e.g. Asthma)", color = TextMuted) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { onAddCondition() }),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = EmergencyYellow,
+                            unfocusedBorderColor = ColorSurfaceBorder,
+                            focusedContainerColor = ColorSurfaceElevatedDark,
+                            unfocusedContainerColor = ColorSurfaceElevatedDark,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    IconButton(
+                        onClick = onAddCondition,
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(EmergencyYellow.copy(alpha = 0.2f))
+                            .border(1.dp, EmergencyYellow, RoundedCornerShape(8.dp))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add condition",
+                            tint = EmergencyYellow
+                        )
+                    }
+                }
+            }
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = ColorSurfaceDark),
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, ColorSurfaceBorder),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "EMERGENCY CONTACT DETAILS",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MeshCyan,
+                    letterSpacing = 0.8.sp
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = contactName,
+                    onValueChange = onEmergencyContactNameChanged,
+                    label = { Text("Contact Full Name") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Person, contentDescription = null, tint = MeshCyan)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MeshCyan,
+                        unfocusedBorderColor = ColorSurfaceBorder,
+                        focusedContainerColor = ColorSurfaceElevatedDark,
+                        unfocusedContainerColor = ColorSurfaceElevatedDark,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedTextField(
+                    value = contactRelation,
+                    onValueChange = onEmergencyContactRelationChanged,
+                    label = { Text("Relationship & Direct Phone Number") },
+                    leadingIcon = {
+                        Icon(Icons.Default.ContactPhone, contentDescription = null, tint = MeshCyan)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MeshCyan,
+                        unfocusedBorderColor = ColorSurfaceBorder,
+                        focusedContainerColor = ColorSurfaceElevatedDark,
+                        unfocusedContainerColor = ColorSurfaceElevatedDark,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                )
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "Medical ID - Locked Mode Preview")
+@Composable
+fun MedicalIdScreenLockedPreview() {
+    Surface(color = ColorBackgroundDark) {
+        MedicalIdScreen(
+            uiState = MedicalIdUiState(
+                record = MedicalRecord(
+                    name = "Alex Rivera",
+                    age = 28,
+                    bloodType = "O+",
+                    allergies = listOf("Penicillin", "Latex"),
+                    chronicConditions = listOf("Type-1 Diabetes"),
+                    isEncrypted = true,
+                    encryptedPayloadPreview = "AES256-GCM::9d84f1a0e37bc281...f77a"
+                ),
+                isLocked = true,
+                isEditing = false,
+                isRescuerSimulatedInRange = false
+            ),
+            onNavigateBack = {},
+            onToggleRescuerSimulation = {},
+            onToggleEdit = {},
+            onNameChanged = {},
+            onAgeChanged = {},
+            onBloodTypeSelected = {},
+            onEmergencyContactNameChanged = {},
+            onEmergencyContactRelationChanged = {},
+            onNewAllergyTextChanged = {},
+            onAddAllergy = {},
+            onRemoveAllergy = {},
+            onNewConditionTextChanged = {},
+            onAddCondition = {},
+            onRemoveCondition = {},
+            onSaveRecord = {}
+        )
+    }
+}

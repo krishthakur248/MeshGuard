@@ -1,0 +1,80 @@
+// app/src/main/java/com/meshguard/app/ui/screens/survivor/HomeViewModel.kt
+package com.meshguard.app.ui.screens.survivor
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.meshguard.app.data.model.MeshPeer
+import com.meshguard.app.data.model.SurvivorPacket
+import com.meshguard.app.data.model.UrgencyStatus
+import com.meshguard.app.data.repository.ChatRepository
+import com.meshguard.app.data.repository.FakeChatRepository
+import com.meshguard.app.data.repository.FakeMeshRepository
+import com.meshguard.app.data.repository.FakeSurvivorRepository
+import com.meshguard.app.data.repository.MeshRepository
+import com.meshguard.app.data.repository.SurvivorRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+data class HomeUiState(
+    val myStatus: UrgencyStatus = UrgencyStatus.TRAPPED,
+    val isBroadcastingBeacon: Boolean = true,
+    val isBatterySaverActive: Boolean = true,
+    val activePeerCount: Int = 0,
+    val packetsCarriedCount: Int = 0,
+    val lastSyncAgoSec: Int = 4,
+    val unreadMessageCount: Int = 0,
+    val sectorCode: String = "SEC-4B",
+    val nearbyPeersPreview: List<MeshPeer> = emptyList()
+)
+
+class HomeViewModel(
+    private val survivorRepository: SurvivorRepository = FakeSurvivorRepository(),
+    private val meshRepository: MeshRepository = FakeMeshRepository(),
+    private val chatRepository: ChatRepository = FakeChatRepository()
+) : ViewModel() {
+
+    val uiState: StateFlow<HomeUiState> = combine(
+        survivorRepository.mySurvivorPacket,
+        meshRepository.isBroadcastingBeacon,
+        meshRepository.isBatterySaverActive,
+        meshRepository.nearbyPeers,
+        meshRepository.packetsCarriedCount,
+        chatRepository.messages
+    ) { myPacket, isBroadcasting, isEco, peers, packetsCarried, messages ->
+        val mostRecentSync = peers.minOfOrNull { it.lastSyncAgoSec } ?: 0
+        val unread = messages.count { !it.isFromMe }
+
+        HomeUiState(
+            myStatus = myPacket.statusTag,
+            isBroadcastingBeacon = isBroadcasting,
+            isBatterySaverActive = isEco,
+            activePeerCount = peers.size,
+            packetsCarriedCount = packetsCarried,
+            lastSyncAgoSec = mostRecentSync,
+            unreadMessageCount = unread,
+            sectorCode = myPacket.sectorCode,
+            nearbyPeersPreview = peers.take(3)
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = HomeUiState()
+    )
+
+    fun onToggleBeacon() {
+        meshRepository.toggleBroadcast()
+    }
+
+    fun onToggleBatterySaver(enabled: Boolean) {
+        meshRepository.setBatterySaver(enabled)
+    }
+
+    fun onQuickStatusSelected(status: UrgencyStatus) {
+        survivorRepository.updateMyStatus(status)
+    }
+}

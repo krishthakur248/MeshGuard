@@ -1,0 +1,16 @@
+// app/src/main/java/com/meshguard/app/data/repository/MedicalIdRepository.kt
+package com.meshguard.app.data.repository
+
+import com.meshguard.app.data.model.MedicalRecord
+import kotlinx.coroutines.flow.StateFlow
+
+/**
+ * Interface managing encrypted local Medical ID record and responder key unlocking.
+ */
+interface MedicalIdRepository {
+    val medicalRecord: StateFlow<MedicalRecord>
+
+    fun updateMedicalRecord(record: MedicalRecord)
+    fun toggleEncryption(enable: Boolean)
+    fun unlockWithRescuerToken(tokenCode: String): Boolean
+}

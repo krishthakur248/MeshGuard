@@ -1,0 +1,196 @@
+// app/src/main/java/com/meshguard/app/ui/screens/onboarding/PermissionsViewModel.kt
+package com.meshguard.app.ui.screens.onboarding
+
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModel
+import com.meshguard.app.R
+import com.meshguard.app.ui.AppStateManager
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+
+/**
+ * Distinct logical permission item with API level requirement notes and rationale.
+ */
+enum class MeshPermissionType {
+    BLUETOOTH,
+    WIFI_DIRECT,
+    LOCATION_LEGACY,
+    AUDIO_RECORD,
+    NOTIFICATIONS
+}
+
+data class PermissionItemState(
+    val type: MeshPermissionType,
+    val titleRes: Int,
+    val descriptionRes: Int,
+    val apiNote: String,
+    val requiredPermissions: List<String>,
+    val isGranted: Boolean = false,
+    val isApplicableForDevice: Boolean = true
+)
+
+data class PermissionsUiState(
+    val permissions: List<PermissionItemState> = emptyList(),
+    val allEssentialGranted: Boolean = false
+)
+
+class PermissionsViewModel : ViewModel() {
+
+    private val _uiState = MutableStateFlow(PermissionsUiState())
+    val uiState: StateFlow<PermissionsUiState> = _uiState.asStateFlow()
+
+    fun checkAndInitializePermissions(context: Context) {
+        val currentSdk = Build.VERSION.SDK_INT
+
+        val items = mutableListOf<PermissionItemState>()
+
+        // 1. Bluetooth Discovery & Advertising
+        // API 31+ (Android 12+): BLUETOOTH_SCAN, BLUETOOTH_ADVERTISE, BLUETOOTH_CONNECT
+        // API 26-30 (Android 8-11): BLUETOOTH, BLUETOOTH_ADMIN
+        val btPermissions = if (currentSdk >= Build.VERSION_CODES.S) {
+            listOf(
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_ADVERTISE,
+                Manifest.permission.BLUETOOTH_CONNECT
+            )
+        } else {
+            listOf(
+                Manifest.permission.BLUETOOTH,
+                Manifest.permission.BLUETOOTH_ADMIN
+            )
+        }
+        val btGranted = btPermissions.all { perm ->
+            ContextCompat.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED
+        }
+        items.add(
+            PermissionItemState(
+                type = MeshPermissionType.BLUETOOTH,
+                titleRes = R.string.perm_bt_title,
+                descriptionRes = R.string.perm_bt_desc,
+                apiNote = if (currentSdk >= Build.VERSION_CODES.S) "Android 12+ (Nearby Mesh Scanning)" else "Legacy Bluetooth Radio",
+                requiredPermissions = btPermissions,
+                isGranted = btGranted,
+                isApplicableForDevice = true
+            )
+        )
+
+        // 2. Wi-Fi Direct Peer Discovery
+        // API 33+ (Android 13+): NEARBY_WIFI_DEVICES
+        // API 26-32: ACCESS_WIFI_STATE, CHANGE_WIFI_STATE
+        val wifiPermissions = if (currentSdk >= Build.VERSION_CODES.TIRAMISU) {
+            listOf(Manifest.permission.NEARBY_WIFI_DEVICES)
+        } else {
+            listOf(
+                Manifest.permission.ACCESS_WIFI_STATE,
+                Manifest.permission.CHANGE_WIFI_STATE
+            )
+        }
+        val wifiGranted = wifiPermissions.all { perm ->
+            ContextCompat.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED
+        }
+        items.add(
+            PermissionItemState(
+                type = MeshPermissionType.WIFI_DIRECT,
+                titleRes = R.string.perm_wifi_title,
+                descriptionRes = R.string.perm_wifi_desc,
+                apiNote = if (currentSdk >= Build.VERSION_CODES.TIRAMISU) "Android 13+ (Direct P2P Transfer)" else "Standard Wi-Fi Direct State",
+                requiredPermissions = wifiPermissions,
+                isGranted = wifiGranted,
+                isApplicableForDevice = true
+            )
+        )
+
+        // 3. Location (Only required on Android 8.0 - 11, API 26-30 for BLE scanning)
+        val isLocationApplicable = currentSdk <= Build.VERSION_CODES.R
+        val locationPermissions = if (isLocationApplicable) {
+            listOf(Manifest.permission.ACCESS_FINE_LOCATION)
+        } else {
+            emptyList()
+        }
+        val locationGranted = if (isLocationApplicable) {
+            locationPermissions.all { perm ->
+                ContextCompat.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED
+            }
+        } else {
+            true // Automatically considered granted/bypassed on Android 12+ where neverForLocation applies
+        }
+        items.add(
+            PermissionItemState(
+                type = MeshPermissionType.LOCATION_LEGACY,
+                titleRes = R.string.perm_location_title,
+                descriptionRes = R.string.perm_location_desc,
+                apiNote = if (isLocationApplicable) "Required on Android 8–11 for BLE scans" else "Android 12+ (Not needed, neverForLocation active)",
+                requiredPermissions = locationPermissions,
+                isGranted = locationGranted,
+                isApplicableForDevice = isLocationApplicable
+            )
+        )
+
+        // 4. Microphone (15-second emergency voice memo blackbox drop)
+        val audioPermissions = listOf(Manifest.permission.RECORD_AUDIO)
+        val audioGranted = audioPermissions.all { perm ->
+            ContextCompat.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED
+        }
+        items.add(
+            PermissionItemState(
+                type = MeshPermissionType.AUDIO_RECORD,
+                titleRes = R.string.perm_audio_title,
+                descriptionRes = R.string.perm_audio_desc,
+                apiNote = "Emergency Voice Drops & Whistle Signals",
+                requiredPermissions = audioPermissions,
+                isGranted = audioGranted,
+                isApplicableForDevice = true
+            )
+        )
+
+        // 5. Notifications (Alerts for incoming triage packets & beacon acks)
+        // API 33+ (Android 13+): POST_NOTIFICATIONS
+        // API 26-32: Enabled by default, runtime permission not applicable
+        val isNotifRuntimeApplicable = currentSdk >= Build.VERSION_CODES.TIRAMISU
+        val notifPermissions = if (isNotifRuntimeApplicable) {
+            listOf(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            emptyList()
+        }
+        val notifGranted = if (isNotifRuntimeApplicable) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+        items.add(
+            PermissionItemState(
+                type = MeshPermissionType.NOTIFICATIONS,
+                titleRes = R.string.perm_notif_title,
+                descriptionRes = R.string.perm_notif_desc,
+                apiNote = if (isNotifRuntimeApplicable) "Android 13+ (Relay & Rescuer Alerts)" else "Standard Notifications",
+                requiredPermissions = notifPermissions,
+                isGranted = notifGranted,
+                isApplicableForDevice = isNotifRuntimeApplicable
+            )
+        )
+
+        val allEssential = items.filter { it.isApplicableForDevice }.all { it.isGranted }
+        _uiState.update {
+            it.copy(
+                permissions = items,
+                allEssentialGranted = allEssential
+            )
+        }
+        AppStateManager.setPermissionsGranted(allEssential)
+    }
+
+    fun onPermissionsResult(context: Context) {
+        checkAndInitializePermissions(context)
+    }
+
+    fun onCompletePermissions(context: Context) {
+        checkAndInitializePermissions(context)
+        AppStateManager.setPermissionsGranted(true)
+    }
+}

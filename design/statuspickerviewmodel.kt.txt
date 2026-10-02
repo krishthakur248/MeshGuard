@@ -1,0 +1,60 @@
+// app/src/main/java/com/meshguard/app/ui/screens/survivor/StatusPickerViewModel.kt
+package com.meshguard.app.ui.screens.survivor
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.meshguard.app.data.model.UrgencyStatus
+import com.meshguard.app.data.repository.FakeSurvivorRepository
+import com.meshguard.app.data.repository.SurvivorRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+data class StatusPickerUiState(
+    val initialStatus: UrgencyStatus = UrgencyStatus.TRAPPED,
+    val selectedStatus: UrgencyStatus = UrgencyStatus.TRAPPED,
+    val sectorCode: String = "SEC-4B",
+    val isConfirmed: Boolean = false
+)
+
+class StatusPickerViewModel(
+    private val survivorRepository: SurvivorRepository = FakeSurvivorRepository()
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(StatusPickerUiState())
+    val uiState: StateFlow<StatusPickerUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            survivorRepository.mySurvivorPacket.collect { packet ->
+                _uiState.update { current ->
+                    // Only initialize selectedStatus if it matches initial default or hasn't been changed
+                    if (current.selectedStatus == current.initialStatus) {
+                        current.copy(
+                            initialStatus = packet.statusTag,
+                            selectedStatus = packet.statusTag,
+                            sectorCode = packet.sectorCode
+                        )
+                    } else {
+                        current.copy(
+                            initialStatus = packet.statusTag,
+                            sectorCode = packet.sectorCode
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    fun onSelectStatus(status: UrgencyStatus) {
+        _uiState.update { it.copy(selectedStatus = status) }
+    }
+
+    fun onConfirmStatus() {
+        val selected = _uiState.value.selectedStatus
+        survivorRepository.updateMyStatus(selected)
+        _uiState.update { it.copy(isConfirmed = true) }
+    }
+}

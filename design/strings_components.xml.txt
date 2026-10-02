@@ -1,0 +1,22 @@
+<!-- app/src/main/res/values/strings_components.xml -->
+<resources>
+    <!-- Component Strings -->
+    <string name="peer_direct_tag">DIRECT</string>
+    <string name="peer_relay_tag">RELAY HOP</string>
+    <string name="peer_last_sync">%1$ds ago</string>
+    <string name="peer_packets_count">%1$d pkts carried</string>
+    <string name="peer_signal_desc">Signal strength %1$d dBm</string>
+
+    <string name="audio_play_desc">Play voice memo</string>
+    <string name="audio_pause_desc">Pause voice memo</string>
+    <string name="audio_memo_label">Voice Memo</string>
+    <string name="audio_duration_format">%1$d sec</string>
+
+    <string name="survivor_hops_format">%1$d hops away</string>
+    <string name="survivor_direct_hop">Direct peer</string>
+    <string name="survivor_encrypted_med">Encrypted Med ID</string>
+    <string name="survivor_unlocked_med">Med ID Unlocked</string>
+    <string name="survivor_time_format">%1$d min ago</string>
+
+    <string name="empty_default_action">Scan Again</string>
+</resources>

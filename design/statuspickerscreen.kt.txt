@@ -1,0 +1,447 @@
+// app/src/main/java/com/meshguard/app/ui/screens/survivor/StatusPickerScreen.kt
+package com.meshguard.app.ui.screens.survivor
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Healing
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.MedicalServices
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.meshguard.app.R
+import com.meshguard.app.data.model.UrgencyStatus
+import com.meshguard.app.ui.theme.ColorBackgroundDark
+import com.meshguard.app.ui.theme.ColorSurfaceBorder
+import com.meshguard.app.ui.theme.ColorSurfaceDark
+import com.meshguard.app.ui.theme.ColorSurfaceElevatedDark
+import com.meshguard.app.ui.theme.EmergencyGreen
+import com.meshguard.app.ui.theme.EmergencyOrange
+import com.meshguard.app.ui.theme.EmergencyRed
+import com.meshguard.app.ui.theme.EmergencyYellow
+import com.meshguard.app.ui.theme.MeshCyan
+import com.meshguard.app.ui.theme.TextMuted
+import com.meshguard.app.ui.theme.TextPrimary
+import com.meshguard.app.ui.theme.TextSecondary
+
+/**
+ * Route Composable connecting StatusPickerViewModel to the navigation stack.
+ */
+@Composable
+fun StatusPickerRoute(
+    onNavigateBack: () -> Unit,
+    viewModel: StatusPickerViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(uiState.isConfirmed) {
+        if (uiState.isConfirmed) {
+            onNavigateBack()
+        }
+    }
+
+    StatusPickerScreen(
+        uiState = uiState,
+        onSelectStatus = viewModel::onSelectStatus,
+        onConfirmStatus = viewModel::onConfirmStatus,
+        onNavigateBack = onNavigateBack
+    )
+}
+
+/**
+ * Stateless StatusPickerScreen displaying 5 large emergency triage tiles:
+ * - TRAPPED (Life-critical red)
+ * - INJURED (High-urgency orange)
+ * - NEEDS_INSULIN (Medical dependency yellow)
+ * - NEED_WATER (Dehydration/Supplies cyan/blue)
+ * - SAFE (Sheltering green)
+ *
+ * Adheres strictly to >= 56dp touch targets, dual visual cues (icon + high-contrast text + radio indicator),
+ * OLED battery conservation, and full accessibility semantics.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun StatusPickerScreen(
+    uiState: StatusPickerUiState,
+    onSelectStatus: (UrgencyStatus) -> Unit,
+    onConfirmStatus: () -> Unit,
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val statuses = UrgencyStatus.values().toList()
+
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        containerColor = ColorBackgroundDark,
+        topBar = {
+            TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = ColorSurfaceDark,
+                    titleContentColor = TextPrimary,
+                    navigationIconContentColor = TextPrimary
+                ),
+                navigationIcon = {
+                    IconButton(
+                        onClick = onNavigateBack,
+                        modifier = Modifier.size(56.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back),
+                            tint = TextPrimary
+                        )
+                    }
+                },
+                title = {
+                    Column {
+                        Text(
+                            text = "EMERGENCY TRIAGE STATUS",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 0.5.sp
+                        )
+                        Text(
+                            text = "Sector ${uiState.sectorCode} • Broadcasted via BLE",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontFamily = FontFamily.Monospace,
+                            color = MeshCyan
+                        )
+                    }
+                }
+            )
+        },
+        bottomBar = {
+            // Accessible 56dp Sticky Confirm CTA
+            Surface(
+                color = ColorSurfaceDark,
+                border = androidx.compose.foundation.BorderStroke(1.dp, ColorSurfaceBorder)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 14.dp)
+                ) {
+                    val confirmButtonColor = when (uiState.selectedStatus) {
+                        UrgencyStatus.TRAPPED -> EmergencyRed
+                        UrgencyStatus.INJURED -> EmergencyOrange
+                        UrgencyStatus.NEEDS_INSULIN -> EmergencyYellow
+                        UrgencyStatus.NEED_WATER -> Color(0xFF00B0FF)
+                        UrgencyStatus.SAFE -> EmergencyGreen
+                    }
+
+                    val buttonTextColor = when (uiState.selectedStatus) {
+                        UrgencyStatus.NEEDS_INSULIN -> Color.Black
+                        else -> Color.White
+                    }
+
+                    Button(
+                        onClick = onConfirmStatus,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = confirmButtonColor,
+                            contentColor = buttonTextColor
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp) // Minimum 56dp accessible touch target
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "BROADCAST ${uiState.selectedStatus.displayName.uppercase()}",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 0.8.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 20.dp)
+        ) {
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Guidance banner
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = ColorSurfaceElevatedDark,
+                border = androidx.compose.foundation.BorderStroke(1.dp, ColorSurfaceBorder),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = MeshCyan,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "Your selected status changes your beacon packet priority in the triage queue for nearby rescuers.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary,
+                        lineHeight = 18.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 5 Large Urgency Tiles
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                items(statuses) { status ->
+                    StatusTileCard(
+                        status = status,
+                        isSelected = uiState.selectedStatus == status,
+                        onClick = { onSelectStatus(status) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Large Interactive Tactical Tile for a single UrgencyStatus.
+ * Sized >= 88dp (far exceeding 56dp minimum), with icon, title, description,
+ * custom accent border, and radio indicator checkmark.
+ */
+@Composable
+private fun StatusTileCard(
+    status: UrgencyStatus,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val (accentColor, icon) = when (status) {
+        UrgencyStatus.TRAPPED -> EmergencyRed to Icons.Default.Warning
+        UrgencyStatus.INJURED -> EmergencyOrange to Icons.Default.Healing
+        UrgencyStatus.NEEDS_INSULIN -> EmergencyYellow to Icons.Default.MedicalServices
+        UrgencyStatus.NEED_WATER -> Color(0xFF00B0FF) to Icons.Default.WaterDrop
+        UrgencyStatus.SAFE -> EmergencyGreen to Icons.Default.CheckCircle
+    }
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) ColorSurfaceElevatedDark else ColorSurfaceDark
+        ),
+        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            width = if (isSelected) 2.dp else 1.dp,
+            color = if (isSelected) accentColor else ColorSurfaceBorder
+        ),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(role = Role.RadioButton) { onClick() }
+            .semantics {
+                contentDescription = "${status.displayName}. ${status.description}. Priority level ${status.priorityLevel}. ${if (isSelected) "Selected" else "Not selected"}."
+            }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Icon in High-Contrast Circle Badge
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(CircleShape)
+                    .background(if (isSelected) accentColor.copy(alpha = 0.2f) else ColorSurfaceElevatedDark)
+                    .border(
+                        width = 1.5.dp,
+                        color = if (isSelected) accentColor else ColorSurfaceBorder,
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            // Title, Priority & Description
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = status.displayName.uppercase(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Black,
+                        color = if (isSelected) TextPrimary else TextSecondary,
+                        letterSpacing = 0.5.sp
+                    )
+
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = if (isSelected) accentColor.copy(alpha = 0.2f) else ColorSurfaceElevatedDark
+                    ) {
+                        Text(
+                            text = "PRIORITY ${status.priorityLevel}",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isSelected) accentColor else TextMuted,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = status.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isSelected) TextSecondary else TextMuted,
+                    lineHeight = 19.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Selection Radio / Check Indicator
+            Box(
+                modifier = Modifier
+                    .size(26.dp)
+                    .clip(CircleShape)
+                    .background(if (isSelected) accentColor else ColorSurfaceElevatedDark)
+                    .border(
+                        width = 2.dp,
+                        color = if (isSelected) accentColor else ColorSurfaceBorder,
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isSelected) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = if (status == UrgencyStatus.NEEDS_INSULIN) Color.Black else Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// PREVIEWS
+// -----------------------------------------------------------------------------
+
+@Preview(showBackground = true, name = "Status Picker - Trapped Selected Preview")
+@Composable
+fun StatusPickerScreenTrappedPreview() {
+    Surface(color = ColorBackgroundDark) {
+        StatusPickerScreen(
+            uiState = StatusPickerUiState(
+                initialStatus = UrgencyStatus.TRAPPED,
+                selectedStatus = UrgencyStatus.TRAPPED,
+                sectorCode = "SEC-4B"
+            ),
+            onSelectStatus = {},
+            onConfirmStatus = {},
+            onNavigateBack = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Status Picker - Safe Selected Preview")
+@Composable
+fun StatusPickerScreenSafePreview() {
+    Surface(color = ColorBackgroundDark) {
+        StatusPickerScreen(
+            uiState = StatusPickerUiState(
+                initialStatus = UrgencyStatus.TRAPPED,
+                selectedStatus = UrgencyStatus.SAFE,
+                sectorCode = "SEC-4A"
+            ),
+            onSelectStatus = {},
+            onConfirmStatus = {},
+            onNavigateBack = {}
+        )
+    }
+}

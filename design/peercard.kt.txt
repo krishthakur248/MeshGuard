@@ -1,0 +1,250 @@
+// app/src/main/java/com/meshguard/app/ui/components/PeerCard.kt
+package com.meshguard.app.ui.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CellTower
+import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.meshguard.app.R
+import com.meshguard.app.data.model.MeshPeer
+import com.meshguard.app.ui.theme.ColorBackgroundDark
+import com.meshguard.app.ui.theme.ColorSurfaceBorder
+import com.meshguard.app.ui.theme.ColorSurfaceDark
+import com.meshguard.app.ui.theme.ColorSurfaceElevatedDark
+import com.meshguard.app.ui.theme.EmergencyGreen
+import com.meshguard.app.ui.theme.EmergencyOrange
+import com.meshguard.app.ui.theme.EmergencyRed
+import com.meshguard.app.ui.theme.EmergencyYellow
+import com.meshguard.app.ui.theme.MeshCyan
+import com.meshguard.app.ui.theme.TextMuted
+import com.meshguard.app.ui.theme.TextPrimary
+import com.meshguard.app.ui.theme.TextSecondary
+
+/**
+ * Reusable card representing an opportunistic BLE or Wi-Fi Direct peer in the mesh.
+ * Displays alias, RSSI signal meter, direct vs relay status, packets carried, and last sync timestamp.
+ * Accessible with a minimum 56dp height and dual cues (icon + label + dBm readout).
+ */
+@Composable
+fun PeerCard(
+    peer: MeshPeer,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
+) {
+    val clickableModifier = if (onClick != null) {
+        Modifier.clickable(role = Role.Button) { onClick() }
+    } else Modifier
+
+    // Signal strength categorization
+    val (signalColor, signalBars) = when {
+        peer.rssi >= -65 -> EmergencyGreen to 4
+        peer.rssi >= -75 -> MeshCyan to 3
+        peer.rssi >= -85 -> EmergencyYellow to 2
+        else -> EmergencyRed to 1
+    }
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = ColorSurfaceDark),
+        shape = RoundedCornerShape(10.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, ColorSurfaceBorder),
+        modifier = modifier
+            .fillMaxWidth()
+            .then(clickableModifier)
+            .semantics {
+                contentDescription = "Peer ${peer.alias}, RSSI ${peer.rssi} dBm, ${if (peer.isDirectConnection) "direct link" else "relay hop"}, ${peer.packetsCarried} packets carried, last synced ${peer.lastSyncAgoSec} seconds ago"
+            }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Peer Icon Indicator
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(ColorSurfaceElevatedDark)
+                    .border(1.dp, if (peer.isDirectConnection) MeshCyan else ColorSurfaceBorder, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (peer.isDirectConnection) Icons.Default.CellTower else Icons.Default.Hub,
+                    contentDescription = null,
+                    tint = if (peer.isDirectConnection) MeshCyan else TextSecondary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Main Info
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = peer.alias,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = if (peer.isDirectConnection) MeshCyan.copy(alpha = 0.15f) else ColorSurfaceElevatedDark
+                    ) {
+                        Text(
+                            text = if (peer.isDirectConnection) {
+                                stringResource(R.string.peer_direct_tag)
+                            } else {
+                                stringResource(R.string.peer_relay_tag)
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (peer.isDirectConnection) MeshCyan else TextMuted,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.SwapHoriz,
+                            contentDescription = null,
+                            tint = TextMuted,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = stringResource(R.string.peer_packets_count, peer.packetsCarried),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                    }
+
+                    Text(
+                        text = "•",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextMuted
+                    )
+
+                    Text(
+                        text = stringResource(R.string.peer_last_sync, peer.lastSyncAgoSec),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextMuted
+                    )
+                }
+            }
+
+            // RSSI Signal Meter & Label
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.Center
+            ) {
+                // Tactical signal bars (1 to 4 bars)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalAlignment = Alignment.Bottom,
+                    modifier = Modifier.height(16.dp)
+                ) {
+                    for (i in 1..4) {
+                        Box(
+                            modifier = Modifier
+                                .width(3.5.dp)
+                                .height((4 * i).dp)
+                                .clip(RoundedCornerShape(1.dp))
+                                .background(if (i <= signalBars) signalColor else ColorSurfaceBorder)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "${peer.rssi} dBm",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    color = signalColor
+                )
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PeerCardPreview() {
+    Surface(color = ColorBackgroundDark) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            PeerCard(
+                peer = MeshPeer(
+                    peerId = "peer-01",
+                    alias = "Mule Relay #04",
+                    rssi = -64,
+                    packetsCarried = 24,
+                    isDirectConnection = true,
+                    lastSyncAgoSec = 4
+                )
+            )
+
+            PeerCard(
+                peer = MeshPeer(
+                    peerId = "peer-02",
+                    alias = "Citizen Node #C9",
+                    rssi = -86,
+                    packetsCarried = 6,
+                    isDirectConnection = false,
+                    lastSyncAgoSec = 35
+                )
+            )
+        }
+    }
+}
