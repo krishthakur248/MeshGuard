@@ -40,6 +40,8 @@ import com.example.meshguard.ui.screens.survivor.ChatRoute
 import com.example.meshguard.ui.screens.survivor.HomeScreen
 import com.example.meshguard.ui.screens.survivor.MedicalIdRoute
 import com.example.meshguard.ui.screens.survivor.MeshNetworkRoute
+import com.example.meshguard.ui.screens.rescuer.ResponderDashboardRoute
+import com.example.meshguard.ui.screens.rescuer.SurvivorDetailRoute
 import com.example.meshguard.ui.screens.survivor.StatusPickerScreen
 import com.example.meshguard.ui.theme.ColorBackgroundDark
 import com.example.meshguard.ui.theme.ColorSurfaceDark
@@ -210,14 +212,17 @@ fun MeshGuardNavGraph(
 
             // Responder Screens
             composable(Screen.ResponderDashboard.route) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(ColorBackgroundDark)
-                ) {
-                    Text(
-                        text = stringResource(R.string.nav_responder_dashboard),
-                        color = EmergencyRed
+                if (userRole != UserRole.RESCUER) {
+                    androidx.compose.runtime.LaunchedEffect(Unit) {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Home.route) { inclusive = true }
+                        }
+                    }
+                } else {
+                    ResponderDashboardRoute(
+                        onNavigateToSurvivorDetail = { survivorId ->
+                            navController.navigate(Screen.SurvivorDetail.createRoute(survivorId))
+                        }
                     )
                 }
             }
@@ -231,14 +236,16 @@ fun MeshGuardNavGraph(
                 )
             ) { backStackEntry ->
                 val survivorId = backStackEntry.arguments?.getString(Screen.SurvivorDetail.ARG_SURVIVOR_ID) ?: ""
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(ColorBackgroundDark)
-                ) {
-                    Text(
-                        text = "Survivor: $survivorId",
-                        color = TextPrimary
+                if (userRole != UserRole.RESCUER) {
+                    androidx.compose.runtime.LaunchedEffect(Unit) {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Home.route) { inclusive = true }
+                        }
+                    }
+                } else {
+                    SurvivorDetailRoute(
+                        survivorId = survivorId,
+                        onNavigateBack = { navController.popBackStack() }
                     )
                 }
             }

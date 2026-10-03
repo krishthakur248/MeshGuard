@@ -90,12 +90,13 @@ data class PacketEntity(
             latitude = latitude,
             longitude = longitude,
             locationAccuracy = locationAccuracy,
-            locationCapturedAt = locationCapturedAt
+            locationCapturedAt = locationCapturedAt,
+            isAcknowledged = isAcknowledged
         )
     }
 
     companion object {
-        fun fromSurvivorPacket(packet: SurvivorPacket, isAcknowledged: Boolean = false): PacketEntity {
+        fun fromSurvivorPacket(packet: SurvivorPacket, isAcknowledged: Boolean = packet.isAcknowledged): PacketEntity {
             val med = JSONObject()
             med.put("name", packet.medicalData.name)
             med.put("age", packet.medicalData.age)

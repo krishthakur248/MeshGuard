@@ -139,4 +139,8 @@ class FakeSurvivorRepository : SurvivorRepository {
             listOf(packet) + list.filterNot { it.survivorId == packet.survivorId }
         }
     }
+
+    override fun clearAllPackets() {
+        _triagedSurvivors.value = emptyList()
+    }
 }

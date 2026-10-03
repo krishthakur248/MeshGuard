@@ -14,4 +14,5 @@ interface SurvivorRepository {
     fun markSurvivorAcknowledged(survivorId: String)
     fun unlockSurvivorMedicalData(survivorId: String, rescuerAuthCode: String): Boolean
     fun recordReceivedPacket(packet: SurvivorPacket)
+    fun clearAllPackets()
 }

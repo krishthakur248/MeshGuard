@@ -26,7 +26,8 @@ data class SurvivorPacket(
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,
     val locationAccuracy: Float = 0f,
-    val locationCapturedAt: Long = 0L
+    val locationCapturedAt: Long = 0L,
+    val isAcknowledged: Boolean = false
 ) {
     fun toJson(): String {
         val root = JSONObject()
@@ -34,6 +35,7 @@ data class SurvivorPacket(
         root.put("survivorId", survivorId)
         root.put("survivorName", survivorName)
         root.put("statusTag", statusTag.name)
+        root.put("isAcknowledged", isAcknowledged)
         root.put("timestamp", timestamp)
         root.put("priority", priority)
         root.put("hopCount", hopCount)
@@ -124,7 +126,8 @@ data class SurvivorPacket(
                 latitude = lat,
                 longitude = lon,
                 locationAccuracy = acc,
-                locationCapturedAt = capturedAt
+                locationCapturedAt = capturedAt,
+                isAcknowledged = root.optBoolean("isAcknowledged", false)
             )
         }
     }

@@ -138,4 +138,10 @@ class RoomSurvivorRepository(
             packetDao.upsertIfNewer(PacketEntity.fromSurvivorPacket(packet))
         }
     }
+
+    override fun clearAllPackets() {
+        scope.launch {
+            packetDao.clearAll()
+        }
+    }
 }
