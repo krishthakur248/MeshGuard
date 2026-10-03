@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -116,6 +117,7 @@ fun ChatRoute(
         onNavigateBack = onNavigateBack,
         onInputTextChanged = viewModel::onInputTextChanged,
         onSendTextMessage = viewModel::onSendTextMessage,
+        onSendQuickReply = viewModel::onSendQuickReply,
         onStartRecording = viewModel::onStartRecording,
         onStopRecording = { viewModel.onStopRecording(sendImmediately = true) },
         onCancelRecording = viewModel::onCancelRecording,
@@ -130,6 +132,7 @@ fun ChatScreen(
     onNavigateBack: () -> Unit,
     onInputTextChanged: (String) -> Unit,
     onSendTextMessage: () -> Unit,
+    onSendQuickReply: (String) -> Unit,
     onStartRecording: () -> Unit,
     onStopRecording: () -> Unit,
     onCancelRecording: () -> Unit,
@@ -206,11 +209,17 @@ fun ChatScreen(
                 color = ColorSurfaceDark,
                 border = androidx.compose.foundation.BorderStroke(1.dp, ColorSurfaceBorder)
             ) {
-                Box(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // Quick reply chips — only show when not recording
+                    if (!uiState.recordingState.isRecording) {
+                        QuickReplyChips(onSendQuickReply = onSendQuickReply)
+                    }
+
                     if (uiState.recordingState.isRecording) {
                         ActiveVoiceRecordingBar(
                             recordingState = uiState.recordingState,
@@ -441,6 +450,53 @@ private fun MessageDeliveryPill(
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Quick reply chips
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** One-tap emergency phrases shown above the text input. */
+private val QUICK_REPLIES = listOf(
+    "I'm OK" to EmergencyGreen,
+    "Need water" to MeshCyan,
+    "Need food" to EmergencyOrange,
+    "Need meds" to EmergencyRed,
+    "Trapped" to EmergencyRed,
+    "Coming to you" to RescuerBadgeBlue,
+    "Send help" to EmergencyOrange,
+    "All clear" to EmergencyGreen
+)
+
+@Composable
+private fun QuickReplyChips(
+    onSendQuickReply: (String) -> Unit
+) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        contentPadding = PaddingValues(horizontal = 2.dp)
+    ) {
+        items(QUICK_REPLIES) { (label, color) ->
+            Surface(
+                onClick = { onSendQuickReply(label) },
+                shape = RoundedCornerShape(16.dp),
+                color = color.copy(alpha = 0.12f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.5f)),
+                modifier = Modifier.semantics {
+                    contentDescription = "Quick reply: $label"
+                    role = Role.Button
+                }
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = color,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun StandardMessageInputBar(
     text: String,
@@ -636,6 +692,7 @@ fun ChatScreenPreview() {
             onNavigateBack = {},
             onInputTextChanged = {},
             onSendTextMessage = {},
+            onSendQuickReply = {},
             onStartRecording = {},
             onStopRecording = {},
             onCancelRecording = {},

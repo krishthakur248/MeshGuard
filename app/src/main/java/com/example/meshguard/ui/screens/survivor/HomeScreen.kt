@@ -212,9 +212,7 @@ fun HomeScreenContent(
             EmergencyShortcutsGrid(
                 unreadMessages = uiState.unreadMessageCount,
                 onNavigateToMedicalId = onNavigateToMedicalId,
-                onNavigateToChat = onNavigateToChat,
-                onNavigateToBreadcrumbs = onNavigateToBreadcrumbs,
-                onNavigateToMeshNetwork = onNavigateToMeshNetwork
+                onNavigateToChat = onNavigateToChat
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -587,59 +585,30 @@ private fun QuickStatusRow(
 private fun EmergencyShortcutsGrid(
     unreadMessages: Int,
     onNavigateToMedicalId: () -> Unit,
-    onNavigateToChat: () -> Unit,
-    onNavigateToBreadcrumbs: () -> Unit,
-    onNavigateToMeshNetwork: () -> Unit
+    onNavigateToChat: () -> Unit
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            ShortcutCard(
-                title = "Medical ID",
-                subtitle = "Encrypted Profile",
-                icon = Icons.Default.MedicalServices,
-                accentColor = EmergencyRed,
-                onClick = onNavigateToMedicalId,
-                modifier = Modifier.weight(1f)
-            )
+        ShortcutCard(
+            title = "Medical ID",
+            subtitle = "Encrypted Profile",
+            icon = Icons.Default.MedicalServices,
+            accentColor = EmergencyRed,
+            onClick = onNavigateToMedicalId,
+            modifier = Modifier.weight(1f)
+        )
 
-            ShortcutCard(
-                title = "Mesh Chat",
-                subtitle = "15s Voice Drops",
-                icon = Icons.Default.ChatBubble,
-                accentColor = MeshCyan,
-                badgeCount = unreadMessages,
-                onClick = onNavigateToChat,
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            ShortcutCard(
-                title = "Proximity Chain",
-                subtitle = "Hop History",
-                icon = Icons.Default.SwapHoriz,
-                accentColor = EmergencyOrange,
-                onClick = onNavigateToBreadcrumbs,
-                modifier = Modifier.weight(1f)
-            )
-
-            ShortcutCard(
-                title = "Network Topology",
-                subtitle = "Radio Status",
-                icon = Icons.Default.Hub,
-                accentColor = EmergencyGreen,
-                onClick = onNavigateToMeshNetwork,
-                modifier = Modifier.weight(1f)
-            )
-        }
+        ShortcutCard(
+            title = "Mesh Chat",
+            subtitle = "15s Voice Drops",
+            icon = Icons.Default.ChatBubble,
+            accentColor = MeshCyan,
+            badgeCount = unreadMessages,
+            onClick = onNavigateToChat,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 

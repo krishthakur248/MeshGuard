@@ -10,6 +10,7 @@ import com.example.meshguard.data.model.MeshPeer
 import com.example.meshguard.data.model.SurvivorPacket
 import com.example.meshguard.data.model.UrgencyStatus
 import com.example.meshguard.data.model.UserRole
+import com.example.meshguard.data.repository.CHAT_PAYLOAD_PREFIX
 import com.google.android.gms.nearby.Nearby
 import com.google.android.gms.nearby.connection.AdvertisingOptions
 import com.google.android.gms.nearby.connection.ConnectionInfo
@@ -49,12 +50,19 @@ class NearbyMeshRepository(
     context: Context,
     private val accountRepository: AccountRepository = AccountRepository.getInstance(context),
     private val survivorRepository: SurvivorRepository? = null,
-    private val packetDao: PacketDao? = null
+    private val packetDao: PacketDao? = null,
+    /** Step 12: real chat repository — wired after construction via [setChatRepository]. */
+    private var chatRepository: NearbyMeshChatRepository? = null
 ) : MeshRepository {
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val fallbackConnectionJobs = mutableMapOf<String, Job>()
+
+    // Step 12 fix: retry jobs and attempt counters for STATUS_ENDPOINT_IO_ERROR (8012) collisions.
+    // We retry with randomised exponential backoff so the two colliding phones don't retry together.
+    private val retryJobs = mutableMapOf<String, Job>()
+    private val retryCount = mutableMapOf<String, Int>()
 
     @Volatile
     private var isMeshRunning = false
@@ -138,8 +146,18 @@ class NearbyMeshRepository(
                 return
             }
 
+            val rawStr = String(bytes, Charsets.UTF_8)
+
+            // Step 12: Chat messages use a "CHAT:" prefix to distinguish from SurvivorPacket JSON
+            if (rawStr.startsWith(CHAT_PAYLOAD_PREFIX)) {
+                val jsonStr = rawStr.removePrefix(CHAT_PAYLOAD_PREFIX)
+                chatRepository?.onChatPayloadReceived(jsonStr, endpointId)
+                return
+            }
+
+            // ── Survivor packet path (unchanged) ─────────────────────────────
             try {
-                val jsonStr = String(bytes, Charsets.UTF_8)
+                val jsonStr = rawStr
                 val packet = SurvivorPacket.fromJson(jsonStr)
 
                 // Step 7: Drop loopback packet (originated from this device)
@@ -277,6 +295,14 @@ class NearbyMeshRepository(
                     Log.e(TAG, "✗ Connection FAILED to $endpointId  code=$code")
                     pendingNames.remove(endpointId)
                     removePeer(endpointId)
+                    // For IO errors that surface via onConnectionResult, trigger a rescan
+                    // after a short random delay so we rediscover and retry.
+                    if (_isBroadcastingBeacon.value) {
+                        scope.launch {
+                            delay(2000L + (0..2000).random())
+                            rescan()
+                        }
+                    }
                 }
             }
         }
@@ -286,6 +312,8 @@ class NearbyMeshRepository(
             pendingNames.remove(endpointId)
             pendingRequests.remove(endpointId)
             fallbackConnectionJobs.remove(endpointId)?.cancel()
+            retryJobs.remove(endpointId)?.cancel()
+            retryCount.remove(endpointId)
             removePeer(endpointId)
 
             // In Nearby Connections, once an endpoint disconnects, Google Play Services
@@ -318,17 +346,17 @@ class NearbyMeshRepository(
             val displayName = info.endpointName.substringBefore(NAME_SEPARATOR)
             pendingNames[endpointId] = displayName
 
-            // --- Tiebreaker to avoid symmetric collision ---
-            // Both phones advertise their name as "ModelName#randomUuid".
-            // We parse the remote UUID and compare with ours.
-            // Device with the greater UUID initiates immediately.
-            // Device with smaller UUID waits briefly for the other to initiate,
-            // but initiates after a timeout if the other hasn't (prevents hang).
+            // --- Tiebreaker to avoid symmetric UKEY2 collision ---
+            // Both phones advertise "ModelName#randomUuid".
+            // Greater UUID initiates immediately. Lesser UUID waits a RANDOM delay
+            // (1800–4200 ms) so the two phones are unlikely to fire at the same time.
             val remoteUuid = info.endpointName.substringAfter(NAME_SEPARATOR, "")
             if (remoteUuid.isNotEmpty() && myUuid < remoteUuid) {
-                Log.d(TAG, "Tiebreaker: myUuid=$myUuid < remoteUuid=$remoteUuid → WAIT briefly for peer")
+                // Random wait: base 2000ms ± up to 1200ms jitter
+                val waitMs = 2000L + (0..1200).random()
+                Log.d(TAG, "Tiebreaker: myUuid=$myUuid < remoteUuid=$remoteUuid → WAIT ${waitMs}ms for peer")
                 fallbackConnectionJobs[endpointId] = scope.launch {
-                    delay(2500)
+                    delay(waitMs)
                     if (endpointId !in pendingRequests && _nearbyPeers.value.none { it.peerId == endpointId }) {
                         Log.d(TAG, "Fallback timer expired for $endpointId — initiating connection")
                         requestConnectionTo(endpointId)
@@ -359,16 +387,50 @@ class NearbyMeshRepository(
             connectionLifecycleCallback
         ).addOnSuccessListener {
             Log.d(TAG, "requestConnection sent to $endpointId")
+            // Clear retry counter on a successful request
+            retryCount.remove(endpointId)
         }.addOnFailureListener { e ->
             val statusCode = (e as? ApiException)?.statusCode
-            if (statusCode == ConnectionsStatusCodes.STATUS_ALREADY_CONNECTED_TO_ENDPOINT) {
-                val name = pendingNames.remove(endpointId) ?: "Peer"
-                Log.d(TAG, "Already connected to $endpointId — adding to peers")
-                addPeer(endpointId, name)
-            } else {
-                Log.e(TAG, "requestConnection FAILED to $endpointId (code=$statusCode)", e)
-            }
             pendingRequests.remove(endpointId)
+
+            when (statusCode) {
+                ConnectionsStatusCodes.STATUS_ALREADY_CONNECTED_TO_ENDPOINT -> {
+                    val name = pendingNames.remove(endpointId) ?: "Peer"
+                    Log.d(TAG, "Already connected to $endpointId — adding to peers")
+                    addPeer(endpointId, name)
+                    retryCount.remove(endpointId)
+                }
+                // 8012 = STATUS_ENDPOINT_IO_ERROR — UKEY2 Bluetooth collision.
+                // Both phones tried to connect simultaneously. Retry with random backoff
+                // so one phone retries before the other, breaking the collision.
+                8012 -> {
+                    val attempt = (retryCount[endpointId] ?: 0) + 1
+                    retryCount[endpointId] = attempt
+                    if (attempt <= 5 && _isBroadcastingBeacon.value) {
+                        // Base delay doubles each retry (500ms, 1000ms, 2000ms…) + up to 1500ms jitter
+                        val backoffMs = (500L * (1 shl (attempt - 1))).coerceAtMost(4000L)
+                        val jitterMs = (0..1500).random().toLong()
+                        val delayMs = backoffMs + jitterMs
+                        Log.w(TAG, "requestConnection 8012 to $endpointId (attempt $attempt) — retrying in ${delayMs}ms")
+                        retryJobs[endpointId]?.cancel()
+                        retryJobs[endpointId] = scope.launch {
+                            delay(delayMs)
+                            if (_nearbyPeers.value.none { it.peerId == endpointId } &&
+                                _isBroadcastingBeacon.value) {
+                                requestConnectionTo(endpointId)
+                            }
+                        }
+                    } else {
+                        Log.w(TAG, "requestConnection 8012 to $endpointId — max retries reached, waiting for rescan")
+                        retryCount.remove(endpointId)
+                        // Trigger a full rescan so onEndpointFound fires again
+                        rescan()
+                    }
+                }
+                else -> {
+                    Log.e(TAG, "requestConnection FAILED to $endpointId (code=$statusCode)", e)
+                }
+            }
         }
     }
 
@@ -435,6 +497,46 @@ class NearbyMeshRepository(
             .addOnFailureListener { e ->
                 Log.e(TAG, "gossipSync: FAILED to send ${packet.survivorId} to $endpointId", e)
             }
+    }
+
+    // -------------------------------------------------------------------------
+    // Step 12: Wire chat repository after construction (avoids circular init)
+    // -------------------------------------------------------------------------
+
+    /** Called by AppDependencies after both repos are created. */
+    fun setChatRepository(repo: NearbyMeshChatRepository) {
+        chatRepository = repo
+    }
+
+    // -------------------------------------------------------------------------
+    // Step 12: Raw send helpers used by NearbyMeshChatRepository
+    // -------------------------------------------------------------------------
+
+    /** Send raw bytes to ALL currently connected peers. */
+    internal fun sendRawToAllPeers(bytes: ByteArray) {
+        val peers = _nearbyPeers.value
+        if (peers.isEmpty()) {
+            Log.d(TAG, "sendRawToAllPeers: no connected peers")
+            return
+        }
+        val payload = Payload.fromBytes(bytes)
+        for (peer in peers) {
+            connectionsClient.sendPayload(peer.peerId, payload)
+                .addOnSuccessListener { Log.d(TAG, "sendRawToAllPeers: OK → ${peer.peerId}") }
+                .addOnFailureListener { e -> Log.e(TAG, "sendRawToAllPeers: FAILED → ${peer.peerId}", e) }
+        }
+    }
+
+    /** Send raw bytes to all peers EXCEPT [excludeEndpointId]. */
+    internal fun sendRawToAllPeersExcept(bytes: ByteArray, excludeEndpointId: String) {
+        val peers = _nearbyPeers.value.filter { it.peerId != excludeEndpointId }
+        if (peers.isEmpty()) return
+        val payload = Payload.fromBytes(bytes)
+        for (peer in peers) {
+            connectionsClient.sendPayload(peer.peerId, payload)
+                .addOnSuccessListener { Log.d(TAG, "sendRawExcept: OK → ${peer.peerId}") }
+                .addOnFailureListener { e -> Log.e(TAG, "sendRawExcept: FAILED → ${peer.peerId}", e) }
+        }
     }
 
     // -------------------------------------------------------------------------

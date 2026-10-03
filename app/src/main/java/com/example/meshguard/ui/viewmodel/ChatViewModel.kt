@@ -70,6 +70,13 @@ class ChatViewModel(
         }
     }
 
+    /** Called when a quick-reply chip is tapped. Sends the preset text immediately. */
+    fun onSendQuickReply(text: String) {
+        if (text.isNotBlank()) {
+            chatRepository.sendTextMessage(text)
+        }
+    }
+
     fun onStartRecording() {
         recordingTimerJob?.cancel()
         _recordingState.value = VoiceRecordingState(

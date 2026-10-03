@@ -4,21 +4,25 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.example.meshguard.data.local.dao.ChatDao
 import com.example.meshguard.data.local.dao.PacketDao
+import com.example.meshguard.data.local.entity.ChatMessageEntity
 import com.example.meshguard.data.local.entity.PacketEntity
 
 /**
- * MeshGuard Room SQLite database representing the gossip buffer and local packet storage.
- * Stores packets surviving process termination and phone restarts.
+ * MeshGuard Room SQLite database.
+ * Step 12: added ChatMessageEntity / ChatDao (version bump 3 → 4).
+ * fallbackToDestructiveMigration() handles the schema change on first install of this version.
  */
 @Database(
-    entities = [PacketEntity::class],
-    version = 3,
+    entities = [PacketEntity::class, ChatMessageEntity::class],
+    version = 4,
     exportSchema = false
 )
 abstract class MeshGuardDatabase : RoomDatabase() {
 
     abstract fun packetDao(): PacketDao
+    abstract fun chatDao(): ChatDao
 
     companion object {
         @Volatile
