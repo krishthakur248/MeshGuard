@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -76,6 +77,7 @@ import com.example.meshguard.ui.theme.ColorSurfaceDark
 import com.example.meshguard.ui.theme.ColorSurfaceElevatedDark
 import com.example.meshguard.ui.theme.EmergencyGreen
 import com.example.meshguard.ui.theme.EmergencyOrange
+import com.example.meshguard.ui.theme.EmergencyRed
 import com.example.meshguard.ui.theme.EmergencyYellow
 import com.example.meshguard.ui.theme.MeshCyan
 import com.example.meshguard.ui.theme.TextMuted
@@ -209,9 +211,13 @@ fun MeshNetworkScreen(
             }
 
             item {
-                HopRelayVisualizerCard(
-                    peerCount = uiState.peers.size,
-                    packetsCarried = uiState.packetsCarriedCount
+                GossipBufferCard(
+                    packetsCarried = uiState.packetsCarriedCount,
+                    maxCapacity = uiState.maxBufferCapacity,
+                    trappedCount = uiState.trappedCount,
+                    injuredCount = uiState.injuredCount,
+                    needsMedsCount = uiState.needsMedsCount,
+                    safeCount = uiState.safeCount
                 )
             }
 
@@ -405,54 +411,26 @@ private fun TelemetryMiniTile(
 }
 
 @Composable
-private fun HopRelayVisualizerCard(
-    peerCount: Int,
+private fun GossipBufferCard(
     packetsCarried: Int,
+    maxCapacity: Int,
+    trappedCount: Int,
+    injuredCount: Int,
+    needsMedsCount: Int,
+    safeCount: Int,
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "hopTransition")
-
-    val progressForward by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2800, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "packetProgress1"
-    )
-
-    val progressBackward by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(3400, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "packetProgress2"
-    )
-
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.3f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1400, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "nodePulse"
-    )
+    val usageRatio = (packetsCarried.toFloat() / maxCapacity.coerceAtLeast(1)).coerceIn(0f, 1f)
+    val usagePercent = (usageRatio * 100).toInt()
 
     Card(
         colors = CardDefaults.cardColors(containerColor = ColorSurfaceDark),
         shape = RoundedCornerShape(12.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, ColorSurfaceBorder),
-        modifier = modifier
-            .fillMaxWidth()
-            .semantics {
-                contentDescription = "Visual hop-by-hop relay diagram showing packets propagating between $peerCount nearby phones toward the rescue staging base."
-            }
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            // Header Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -460,17 +438,17 @@ private fun HopRelayVisualizerCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.CellTower,
+                        imageVector = Icons.Default.SwapHoriz,
                         contentDescription = null,
                         tint = MeshCyan,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "HOP-BY-HOP MESH PROPAGATION",
+                        text = "GOSSIP STORE & TRIAGE CACHE",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp,
+                        letterSpacing = 0.8.sp,
                         color = TextSecondary
                     )
                 }
@@ -480,7 +458,7 @@ private fun HopRelayVisualizerCard(
                     color = MeshCyan.copy(alpha = 0.15f)
                 ) {
                     Text(
-                        text = "EPIDEMIC GOSSIP",
+                        text = "EPIDEMIC BUFFER",
                         style = MaterialTheme.typography.labelSmall,
                         fontFamily = FontFamily.Monospace,
                         color = MeshCyan,
@@ -489,157 +467,138 @@ private fun HopRelayVisualizerCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
+            // Buffer Utilization header + Progress Bar
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Local Mule Storage",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "$packetsCarried / $maxCapacity packets ($usagePercent%)",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    color = MeshCyan
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Custom Sleek Progress Bar
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp))
                     .background(ColorSurfaceElevatedDark)
-                    .border(1.dp, ColorSurfaceBorder, RoundedCornerShape(8.dp))
             ) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val width = size.width
-                    val height = size.height
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(usageRatio.coerceAtLeast(0.02f))
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(if (usagePercent > 80) EmergencyOrange else MeshCyan)
+                )
+            }
 
-                    val node0 = Offset(width * 0.12f, height * 0.50f)
-                    val node1 = Offset(width * 0.38f, height * 0.28f)
-                    val node2 = Offset(width * 0.64f, height * 0.72f)
-                    val node3 = Offset(width * 0.88f, height * 0.50f)
+            Spacer(modifier = Modifier.height(14.dp))
 
-                    val pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
-
-                    drawLine(
-                        color = ColorSurfaceBorder,
-                        start = node0,
-                        end = node1,
-                        strokeWidth = 2f,
-                        pathEffect = pathEffect,
-                        cap = StrokeCap.Round
-                    )
-                    drawLine(
-                        color = ColorSurfaceBorder,
-                        start = node0,
-                        end = node2,
-                        strokeWidth = 2f,
-                        pathEffect = pathEffect,
-                        cap = StrokeCap.Round
-                    )
-                    drawLine(
-                        color = ColorSurfaceBorder,
-                        start = node1,
-                        end = node3,
-                        strokeWidth = 2f,
-                        pathEffect = pathEffect,
-                        cap = StrokeCap.Round
-                    )
-                    drawLine(
-                        color = ColorSurfaceBorder,
-                        start = node2,
-                        end = node3,
-                        strokeWidth = 2f,
-                        pathEffect = pathEffect,
-                        cap = StrokeCap.Round
-                    )
-
-                    val p1 = if (progressForward < 0.5f) {
-                        val segProgress = progressForward * 2f
-                        Offset(
-                            x = node0.x + (node1.x - node0.x) * segProgress,
-                            y = node0.y + (node1.y - node0.y) * segProgress
-                        )
-                    } else {
-                        val segProgress = (progressForward - 0.5f) * 2f
-                        Offset(
-                            x = node1.x + (node3.x - node1.x) * segProgress,
-                            y = node1.y + (node3.y - node1.y) * segProgress
-                        )
-                    }
-                    drawCircle(color = MeshCyan.copy(alpha = 0.35f), radius = 8f, center = p1)
-                    drawCircle(color = MeshCyan, radius = 4f, center = p1)
-
-                    val p2 = if (progressBackward > 0.5f) {
-                        val segProgress = (progressBackward - 0.5f) * 2f
-                        Offset(
-                            x = node2.x + (node3.x - node2.x) * segProgress,
-                            y = node2.y + (node3.y - node2.y) * segProgress
-                        )
-                    } else {
-                        val segProgress = progressBackward * 2f
-                        Offset(
-                            x = node0.x + (node2.x - node0.x) * segProgress,
-                            y = node0.y + (node2.y - node0.y) * segProgress
-                        )
-                    }
-                    drawCircle(color = EmergencyGreen.copy(alpha = 0.35f), radius = 8f, center = p2)
-                    drawCircle(color = EmergencyGreen, radius = 4f, center = p2)
-
-                    drawCircle(
-                        color = MeshCyan.copy(alpha = 0.2f),
-                        radius = 16f * pulseScale,
-                        center = node0
-                    )
-                    drawCircle(color = MeshCyan, radius = 9f, center = node0)
-                    drawCircle(color = ColorBackgroundDark, radius = 4f, center = node0)
-
-                    drawCircle(color = ColorSurfaceBorder, radius = 9f, center = node1)
-                    drawCircle(color = EmergencyOrange, radius = 6f, center = node1)
-
-                    drawCircle(color = ColorSurfaceBorder, radius = 9f, center = node2)
-                    drawCircle(color = EmergencyYellow, radius = 6f, center = node2)
-
-                    drawCircle(color = EmergencyGreen.copy(alpha = 0.25f), radius = 14f, center = node3)
-                    drawCircle(color = EmergencyGreen, radius = 9f, center = node3)
-                    drawCircle(color = Color.White, radius = 4f, center = node3)
-                }
+            // Triage Breakdown Mini Grid (4 columns)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                TriageStatChip(
+                    count = trappedCount,
+                    label = "TRAPPED",
+                    color = EmergencyRed,
+                    modifier = Modifier.weight(1f)
+                )
+                TriageStatChip(
+                    count = injuredCount,
+                    label = "INJURED",
+                    color = EmergencyOrange,
+                    modifier = Modifier.weight(1f)
+                )
+                TriageStatChip(
+                    count = needsMedsCount,
+                    label = "MEDS/WATER",
+                    color = EmergencyYellow,
+                    modifier = Modifier.weight(1f)
+                )
+                TriageStatChip(
+                    count = safeCount,
+                    label = "SAFE",
+                    color = EmergencyGreen,
+                    modifier = Modifier.weight(1f)
+                )
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+            // Policy Tag Footer
+            Surface(
+                shape = RoundedCornerShape(4.dp),
+                color = ColorSurfaceElevatedDark,
+                border = androidx.compose.foundation.BorderStroke(1.dp, ColorSurfaceBorder),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                TopologyNodeLegend(label = "This Device", tag = "Source", color = MeshCyan)
-                TopologyNodeLegend(label = "Relay #04", tag = "Hop 1", color = EmergencyOrange)
-                TopologyNodeLegend(label = "Relay #C9", tag = "Hop 2", color = EmergencyYellow)
-                TopologyNodeLegend(label = "Rescue Base", tag = "Dest", color = EmergencyGreen)
+                Text(
+                    text = "ROUTING RULES: Highest Urgency First • TTL 10 Hops • Newest Wins",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace,
+                    color = TextMuted,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.padding(vertical = 5.dp, horizontal = 4.dp)
+                )
             }
         }
     }
 }
 
 @Composable
-private fun TopologyNodeLegend(
+private fun TriageStatChip(
+    count: Int,
     label: String,
-    tag: String,
-    color: Color
+    color: Color,
+    modifier: Modifier = Modifier
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .clip(CircleShape)
-                    .background(color)
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color = ColorSurfaceElevatedDark,
+        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.35f)),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "$count",
+                style = MaterialTheme.typography.titleMedium,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Black,
+                color = color
             )
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
+                fontSize = 8.5.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary,
-                fontSize = 10.sp
+                color = color.copy(alpha = 0.85f),
+                maxLines = 1
             )
         }
-        Text(
-            text = tag,
-            style = MaterialTheme.typography.labelSmall,
-            fontFamily = FontFamily.Monospace,
-            color = TextMuted,
-            fontSize = 9.sp
-        )
     }
 }
 

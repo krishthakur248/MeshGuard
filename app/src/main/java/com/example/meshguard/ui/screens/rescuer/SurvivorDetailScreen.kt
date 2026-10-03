@@ -421,6 +421,173 @@ private fun LocationAndMeshCard(survivor: SurvivorPacket) {
                     modifier = Modifier.weight(1f)
                 )
             }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Step 13: Phase 2 Chain of Contact / Breadcrumb Trail
+            Text(
+                text = "CHAIN OF CONTACT • BREADCRUMB TRAIL",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.5.sp,
+                color = MeshCyan
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (survivor.historyNodes.isEmpty()) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = ColorSurfaceElevatedDark,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, ColorSurfaceBorder),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(EmergencyGreen)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (survivor.hopCount == 0) "Direct peer reception (0 intermediate hops)" else "Relayed across peer mesh (${survivor.hopCount} hop(s))",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                    }
+                }
+            } else {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Origin node
+                    BreadcrumbHopRow(
+                        index = 0,
+                        title = survivor.survivorName.ifBlank { survivor.survivorId },
+                        role = "ORIGIN SOURCE",
+                        timeText = "Emitted",
+                        rssi = null,
+                        isOrigin = true
+                    )
+
+                    // Intermediate mule hops
+                    survivor.historyNodes.forEachIndexed { i, node ->
+                        BreadcrumbHopRow(
+                            index = i + 1,
+                            title = node.deviceAlias.ifBlank { "Data Mule #${i + 1}" },
+                            role = "RELAY HOP",
+                            timeText = runCatching {
+                                val sdf = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                                sdf.format(Date(node.lastSeenTimestamp))
+                            }.getOrDefault("Relayed"),
+                            rssi = node.signalStrengthRssi,
+                            isOrigin = false
+                        )
+                    }
+
+                    // Rescuer destination node
+                    BreadcrumbHopRow(
+                        index = survivor.historyNodes.size + 1,
+                        title = "Incident Command (This Rescuer)",
+                        role = "DELIVERED TO COMMAND",
+                        timeText = "Ingested",
+                        rssi = null,
+                        isOrigin = false,
+                        isDestination = true
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BreadcrumbHopRow(
+    index: Int,
+    title: String,
+    role: String,
+    timeText: String,
+    rssi: Int?,
+    isOrigin: Boolean = false,
+    isDestination: Boolean = false
+) {
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color = ColorSurfaceElevatedDark,
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (isDestination) RescuerBadgeBlue.copy(alpha = 0.5f)
+            else if (isOrigin) EmergencyOrange.copy(alpha = 0.4f)
+            else ColorSurfaceBorder
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier
+                        .size(18.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isDestination) RescuerBadgeBlue
+                            else if (isOrigin) EmergencyOrange
+                            else MeshCyan.copy(alpha = 0.7f)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "$index",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = role,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 9.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = if (isDestination) RescuerBadgeBlue else if (isOrigin) EmergencyOrange else MeshCyan
+                    )
+                }
+            }
+
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = timeText,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    color = TextMuted
+                )
+                if (rssi != null && rssi != 0) {
+                    Text(
+                        text = "$rssi dBm",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = EmergencyGreen
+                    )
+                }
+            }
         }
     }
 }
