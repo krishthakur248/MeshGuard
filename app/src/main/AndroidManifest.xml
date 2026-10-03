@@ -58,6 +58,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- Step 9: Required on Android 14+ (API 34+) for data-sync-type foreground services -->
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"
+        tools:targetApi="upside_down_cake" />
 
     <application
         android:allowBackup="true"
@@ -81,6 +85,22 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+            Step 9: Foreground service that keeps the mesh radio alive in the background.
+            exported=false  → only our app can start it.
+            foregroundServiceType:
+              "connectedDevice" covers Bluetooth/Wi-Fi scanning (Nearby Connections).
+              "location"        covers the GPS updates in LocationProvider.
+            On Android 14+ both types must be listed here AND declared as permissions.
+        -->
+        <service
+            android:name=".service.MeshForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice"
+            android:stopWithTask="false" />
+
     </application>
 
 </manifest>
+

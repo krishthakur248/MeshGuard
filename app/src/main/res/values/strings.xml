@@ -100,4 +100,14 @@
     <string name="role_confirm_rescuer">Authenticate as Rescue Worker</string>
     <string name="onboarding_err_code_empty">Authorization code cannot be empty for rescuers</string>
     <string name="onboarding_err_code_invalid">Invalid code. Enter valid badge code or RESCUE-2024</string>
+
+    <!-- Step 9: Foreground Service Notification -->
+    <string name="notif_channel_name">MeshGuard Mesh Radio</string>
+    <string name="notif_channel_desc">Keeps the offline mesh network running while the app is in the background.</string>
+    <string name="notif_title_survivor">MeshGuard · SOS Beacon Active</string>
+    <!-- %1$s = status tag, %2$d = connected peer count -->
+    <string name="notif_body_survivor">Status: %1$s · %2$d peer(s) in range</string>
+    <string name="notif_title_rescuer">MeshGuard · Rescue Radio Active</string>
+    <!-- %1$d = peer count, %2$d = packets carried -->
+    <string name="notif_body_rescuer">%1$d peer(s) · %2$d survivor packet(s) stored</string>
 </resources>

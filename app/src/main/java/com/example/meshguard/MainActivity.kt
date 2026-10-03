@@ -16,6 +16,7 @@ import androidx.core.location.LocationManagerCompat
 import androidx.navigation.compose.rememberNavController
 import com.example.meshguard.data.model.UserRole
 import com.example.meshguard.data.repository.AccountRepository
+import com.example.meshguard.service.MeshForegroundService
 import com.example.meshguard.ui.AppStateManager
 import com.example.meshguard.ui.navigation.MeshGuardNavGraph
 import com.example.meshguard.ui.navigation.Screen
@@ -80,8 +81,8 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Every time the app comes to the foreground we re-check hardware.
-     * We only update the state flag here — the LaunchedEffect in setContent
-     * watches the flag and handles navigation reactively.
+     * We also start the foreground service if broadcasting is active so
+     * it shows the latest notification state right away.
      */
     override fun onResume() {
         super.onResume()
@@ -106,8 +107,27 @@ class MainActivity : ComponentActivity() {
                 if (!isRescuer) {
                     AppDependencies.locationProvider.startTracking()
                 }
+                // Step 9: Ensure foreground service is alive when we return to foreground.
+                MeshForegroundService.start(this)
             }
         }
     }
-}
 
+    /**
+     * Step 9: When the activity goes to the background (user presses Home or
+     * switches apps), start the foreground service so the mesh radio keeps running.
+     * The service shows a persistent notification — just like Spotify or Google Maps.
+     */
+    override fun onStop() {
+        super.onStop()
+        if (!AppStateManager.hasCompletedOnboarding.value) return
+        if (!AppStateManager.hasGrantedPermissions.value) return
+
+        val accountRepo = AccountRepository.getInstance(applicationContext)
+        val isRescuer = AppStateManager.userRole.value == UserRole.RESCUER
+        // Only keep the service alive if broadcasting is actually enabled.
+        if (isRescuer || accountRepo.loadIsBroadcasting()) {
+            MeshForegroundService.start(this)
+        }
+    }
+}

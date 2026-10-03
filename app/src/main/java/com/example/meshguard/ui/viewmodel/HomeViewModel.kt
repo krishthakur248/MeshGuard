@@ -9,6 +9,7 @@ import com.example.meshguard.data.repository.ChatRepository
 import com.example.meshguard.data.repository.LocationProvider
 import com.example.meshguard.data.repository.MeshRepository
 import com.example.meshguard.data.repository.SurvivorRepository
+import com.example.meshguard.service.MeshForegroundService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -30,7 +31,7 @@ data class HomeUiState(
     val profileWarningMessage: String? = null
 )
 
-class HomeViewModel(
+class HomeViewModel @JvmOverloads constructor(
     private val survivorRepository: SurvivorRepository = AppDependencies.survivorRepository,
     private val meshRepository: MeshRepository = AppDependencies.meshRepository,
     private val chatRepository: ChatRepository = AppDependencies.chatRepository,
@@ -94,6 +95,9 @@ class HomeViewModel(
         if (name.isBlank() || age <= 0) {
             _warningMessage.value = "Please complete Name and Age in Medical ID before broadcasting SOS."
             meshRepository.toggleBroadcast(false)
+            // Step 9: Stop the foreground service if the broadcast is being turned off due to
+            // profile validation failure.
+            MeshForegroundService.stop(AppDependencies.appContext)
         } else {
             _warningMessage.value = null
             meshRepository.toggleBroadcast()
@@ -101,8 +105,13 @@ class HomeViewModel(
             // Step 8: Start/stop GPS location tracking with the broadcast toggle
             if (meshRepository.isBroadcastingBeacon.value) {
                 locationProvider.startTracking()
+                // Step 9: User turned broadcasting ON — start the foreground service so the
+                // mesh keeps running even if they press Home right after.
+                MeshForegroundService.start(AppDependencies.appContext)
             } else {
                 locationProvider.stopTracking()
+                // Step 9: User pressed Pause / turned broadcasting OFF — stop the service.
+                MeshForegroundService.stop(AppDependencies.appContext)
             }
         }
     }

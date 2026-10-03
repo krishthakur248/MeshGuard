@@ -13,6 +13,7 @@ import com.example.meshguard.data.repository.RoomSurvivorRepository
 import com.example.meshguard.data.repository.SurvivorRepository
 
 object AppDependencies {
+    lateinit var appContext: Context
     lateinit var meshRepository: MeshRepository
     lateinit var survivorRepository: SurvivorRepository
     lateinit var chatRepository: ChatRepository
@@ -25,7 +26,8 @@ object AppDependencies {
      * (advertising/discovery) are not orphaned.
      */
     fun init(context: Context) {
-        if (::meshRepository.isInitialized) return
+        if (::appContext.isInitialized) return
+        appContext = context.applicationContext
 
         // Step 8: Create location provider for real GPS coordinates in packets
         locationProvider = LocationProvider(context)
