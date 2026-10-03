@@ -592,7 +592,7 @@ private fun EmergencyShortcutsGrid(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         ShortcutCard(
-            title = "Medical ID",
+            title = "Medical Profile",
             subtitle = "Encrypted Profile",
             icon = Icons.Default.MedicalServices,
             accentColor = EmergencyRed,

@@ -45,51 +45,90 @@ class BreadcrumbChainViewModel(
 
     private val timeFormatter = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
-    private val _uiState = MutableStateFlow(
-        BreadcrumbChainUiState(
-            chainHops = listOf(
-                TimelineHopItem(
-                    id = "node-0",
-                    deviceAlias = "You (Local Device)",
-                    roleBadge = "ORIGIN SOURCE",
-                    hopIndex = 0,
-                    timeAgoFormatted = "Just now",
-                    timestampExact = timeFormatter.format(Date(System.currentTimeMillis())),
-                    rssi = -52,
-                    isLocalDevice = true,
-                    notes = "Distress packet emitted via BLE 20dBm chirp"
-                ),
-                TimelineHopItem(
-                    id = "node-1",
-                    deviceAlias = "Device-7 (Mule Relay #04)",
-                    roleBadge = "DATA MULE",
-                    hopIndex = 1,
-                    timeAgoFormatted = "6 min ago",
-                    timestampExact = timeFormatter.format(Date(System.currentTimeMillis() - 360000L)),
-                    rssi = -64,
-                    notes = "Carried across 4th Avenue debris zone"
-                ),
-                TimelineHopItem(
-                    id = "node-2",
-                    deviceAlias = "Rescue Command Base (Sector 4)",
-                    roleBadge = "RESCUER DESTINATION",
-                    hopIndex = 2,
-                    timeAgoFormatted = "32 min ago",
-                    timestampExact = timeFormatter.format(Date(System.currentTimeMillis() - 1920000L)),
-                    rssi = -58,
-                    isDestination = true,
-                    notes = "Packet ingested into Incident Commander Triage Dashboard"
-                )
+    private val _uiState = MutableStateFlow(buildDefaultUiState())
+    val uiState: StateFlow<BreadcrumbChainUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            meshRepository.breadcrumbChain.collect { hops ->
+                if (hops.isNotEmpty()) {
+                    val timelineItems = mutableListOf<TimelineHopItem>()
+                    timelineItems.add(
+                        TimelineHopItem(
+                            id = "local-origin",
+                            deviceAlias = "You (Local Device)",
+                            roleBadge = "ORIGIN SOURCE",
+                            hopIndex = 0,
+                            timeAgoFormatted = "Origin",
+                            timestampExact = timeFormatter.format(Date(hops.firstOrNull()?.lastSeenTimestamp ?: System.currentTimeMillis())),
+                            rssi = -48,
+                            isLocalDevice = true,
+                            notes = "Local distress beacon created on this phone"
+                        )
+                    )
+
+                    hops.forEachIndexed { index, node ->
+                        val isLast = index == hops.lastIndex
+                        val diffMinutes = ((System.currentTimeMillis() - node.lastSeenTimestamp) / 60000L).coerceAtLeast(0)
+                        timelineItems.add(
+                            TimelineHopItem(
+                                id = "hop-${index + 1}",
+                                deviceAlias = node.deviceAlias.ifBlank { "Relay Mule #${index + 1}" },
+                                roleBadge = if (isLast) "LATEST RELAY" else "DATA MULE",
+                                hopIndex = index + 1,
+                                timeAgoFormatted = if (diffMinutes == 0L) "Just now" else "$diffMinutes min ago",
+                                timestampExact = timeFormatter.format(Date(node.lastSeenTimestamp)),
+                                rssi = node.signalStrengthRssi,
+                                isDestination = isLast,
+                                notes = "Relayed hop #${index + 1} over peer Bluetooth LE"
+                            )
+                        )
+                    }
+
+                    _uiState.update { current ->
+                        current.copy(
+                            totalHops = hops.size,
+                            chainHops = timelineItems,
+                            isRelayHealthy = true
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private fun buildDefaultUiState(): BreadcrumbChainUiState {
+        val now = System.currentTimeMillis()
+        val defaultItems = listOf(
+            TimelineHopItem(
+                id = "node-0",
+                deviceAlias = "You (Local Device)",
+                roleBadge = "ORIGIN SOURCE",
+                hopIndex = 0,
+                timeAgoFormatted = "Just now",
+                timestampExact = timeFormatter.format(Date(now)),
+                rssi = -50,
+                isLocalDevice = true,
+                notes = "Local distress beacon broadcasting over Nearby BLE"
             )
         )
-    )
-
-    val uiState: StateFlow<BreadcrumbChainUiState> = _uiState.asStateFlow()
+        return BreadcrumbChainUiState(
+            originSector = "SEC-4B",
+            destinationSector = "SEC-4 (Safe Haven)",
+            totalHops = 0,
+            totalTimeSpanMinutes = 0,
+            estimatedDistanceMeters = 50,
+            chainHops = defaultItems,
+            isVerifyingChain = false,
+            isRelayHealthy = true
+        )
+    }
 
     fun onRefreshProximityChain() {
         viewModelScope.launch {
             _uiState.update { it.copy(isVerifyingChain = true) }
-            delay(1200L)
+            meshRepository.rescan()
+            delay(1000L)
             _uiState.update { it.copy(isVerifyingChain = false) }
         }
     }

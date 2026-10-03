@@ -10,6 +10,7 @@ import com.example.meshguard.data.repository.MedicalIdRepository
 import com.example.meshguard.data.repository.MeshRepository
 import com.example.meshguard.data.repository.NearbyMeshChatRepository
 import com.example.meshguard.data.repository.NearbyMeshRepository
+import com.example.meshguard.data.repository.PersistentMedicalIdRepository
 import com.example.meshguard.data.repository.RoomSurvivorRepository
 import com.example.meshguard.data.repository.SurvivorRepository
 
@@ -64,6 +65,6 @@ object AppDependencies {
 
         meshRepository = nearbyRepo
         chatRepository = realChatRepo
-        medicalIdRepository = FakeMedicalIdRepository()
+        medicalIdRepository = PersistentMedicalIdRepository(AccountRepository.getInstance(context))
     }
 }

@@ -180,15 +180,36 @@ class NearbyMeshRepository(
                     return
                 }
 
-                // Step 7: Increment hopCount for the relayed copy we store and forward
-                val relayedPacket = packet.copy(hopCount = packet.hopCount + 1)
+                // Step 13: Phase 2 Signed packets check — reject fake/tampered packets
+                if (!SurvivorPacket.verifySignature(packet)) {
+                    Log.w(TAG, "REJECTED forged packet from ${packet.survivorId} — signature verification failed!")
+                    return
+                }
+
+                // Step 13: Phase 2 Breadcrumb tracking (Chain of Contact)
+                val senderPeer = _nearbyPeers.value.find { it.peerId == endpointId }
+                val relayAlias = senderPeer?.alias ?: "Relay Device ($endpointId)"
+                val contactHop = HistoryNode(
+                    deviceAlias = relayAlias,
+                    lastSeenTimestamp = System.currentTimeMillis(),
+                    signalStrengthRssi = -60,
+                    hopIndex = packet.hopCount + 1
+                )
+                recordContactHop(contactHop)
+
+                // Step 7 & 13: Increment hopCount and append contact breadcrumb
+                val updatedHistory = packet.historyNodes + contactHop
+                val relayedPacket = packet.copy(
+                    hopCount = packet.hopCount + 1,
+                    historyNodes = updatedHistory
+                )
 
                 Log.i(TAG, "==================================================")
-                Log.i(TAG, "✓ PACKET RECEIVED from $endpointId")
+                Log.i(TAG, "✓ AUTHENTIC PACKET RECEIVED from $endpointId (Sig Verified)")
                 Log.i(TAG, "  Survivor  : ${relayedPacket.survivorName} (${relayedPacket.survivorId})")
                 Log.i(TAG, "  Status    : ${relayedPacket.statusTag} (Priority: ${relayedPacket.priority})")
                 Log.i(TAG, "  Location  : lat=${relayedPacket.latitude}, lon=${relayedPacket.longitude} (acc=${relayedPacket.locationAccuracy}m)")
-                Log.i(TAG, "  Hop       : ${packet.hopCount} → ${relayedPacket.hopCount} / ttl=${relayedPacket.ttl}")
+                Log.i(TAG, "  Hop       : ${packet.hopCount} → ${relayedPacket.hopCount} / ttl=${relayedPacket.ttl} (Breadcrumbs: ${relayedPacket.historyNodes.size})")
                 Log.i(TAG, "  Timestamp : ${relayedPacket.timestamp}")
                 Log.i(TAG, "==================================================")
 

@@ -177,7 +177,7 @@ fun MedicalIdScreen(
                 title = {
                     Column {
                         Text(
-                            text = "ENCRYPTED MEDICAL ID",
+                            text = "ENCRYPTED MEDICAL PROFILE",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Black,
                             letterSpacing = 0.5.sp
@@ -200,17 +200,15 @@ fun MedicalIdScreen(
                     }
                 },
                 actions = {
-                    if (!uiState.isLocked) {
-                        IconButton(
-                            onClick = { onToggleEdit(!uiState.isEditing) },
-                            modifier = Modifier.size(56.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (uiState.isEditing) Icons.Default.Close else Icons.Default.Edit,
-                                contentDescription = if (uiState.isEditing) "Cancel editing" else "Edit medical ID",
-                                tint = MeshCyan
-                            )
-                        }
+                    IconButton(
+                        onClick = { onToggleEdit(!uiState.isEditing) },
+                        modifier = Modifier.size(56.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (uiState.isEditing) Icons.Default.Close else Icons.Default.Edit,
+                            contentDescription = if (uiState.isEditing) "Cancel editing" else "Edit medical profile",
+                            tint = MeshCyan
+                        )
                     }
                 }
             )
@@ -274,10 +272,11 @@ fun MedicalIdScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (uiState.isLocked) {
+            if (uiState.isLocked && !uiState.isEditing) {
                 LockedMedicalIdView(
                     encryptedPayload = uiState.record.encryptedPayloadPreview,
-                    onSimulateUnlock = { onToggleRescuerSimulation(true) }
+                    onSimulateUnlock = { onToggleRescuerSimulation(true) },
+                    onEditClicked = { onToggleEdit(true) }
                 )
             } else {
                 if (uiState.isEditing) {
@@ -401,6 +400,7 @@ private fun RescuerSimulationBanner(
 private fun LockedMedicalIdView(
     encryptedPayload: String,
     onSimulateUnlock: () -> Unit,
+    onEditClicked: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -521,6 +521,36 @@ private fun LockedMedicalIdView(
                             text = "SIMULATE RESCUER KEY UNLOCK",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Button(
+                    onClick = onEditClicked,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MeshCyan,
+                        contentColor = Color.Black
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = null,
+                            tint = Color.Black,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "EDIT MEDICAL PROFILE",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
                         )
                     }
                 }
@@ -1326,7 +1356,7 @@ private fun EditMedicalIdView(
     }
 }
 
-@Preview(showBackground = true, name = "Medical ID - Locked Mode Preview")
+@Preview(showBackground = true, name = "Medical Profile - Locked Mode Preview")
 @Composable
 fun MedicalIdScreenLockedPreview() {
     Surface(color = ColorBackgroundDark) {

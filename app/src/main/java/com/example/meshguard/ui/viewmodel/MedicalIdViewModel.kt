@@ -14,9 +14,9 @@ import kotlinx.coroutines.launch
 
 data class MedicalIdUiState(
     val record: MedicalRecord = MedicalRecord(),
-    val isLocked: Boolean = true,
+    val isLocked: Boolean = false,
     val isEditing: Boolean = false,
-    val isRescuerSimulatedInRange: Boolean = false,
+    val isRescuerSimulatedInRange: Boolean = true,
     val nameInput: String = "Alex Rivera",
     val ageInput: String = "28",
     val bloodTypeInput: String = "O+",
@@ -44,9 +44,8 @@ class MedicalIdViewModel(
                 _uiState.update { current ->
                     current.copy(
                         record = record,
-                        isLocked = record.isEncrypted,
                         nameInput = record.name,
-                        ageInput = record.age.toString(),
+                        ageInput = if (record.age > 0) record.age.toString() else "",
                         bloodTypeInput = record.bloodType,
                         allergiesInput = record.allergies,
                         conditionsInput = record.chronicConditions,
@@ -79,19 +78,15 @@ class MedicalIdViewModel(
                 _uiState.update { it.copy(isLocked = false) }
             }
         } else {
-            medicalIdRepository.toggleEncryption(true)
             _uiState.update { it.copy(isLocked = true, isEditing = false) }
         }
     }
 
     fun onToggleEditMode(enable: Boolean) {
-        if (_uiState.value.isLocked && enable) {
-            _uiState.update { it.copy(unlockErrorMessage = "Medical record is encrypted. Unlock with rescuer token first.") }
-            return
-        }
         _uiState.update { 
             it.copy(
                 isEditing = enable,
+                isLocked = false,
                 unlockErrorMessage = null,
                 isSavedSuccess = false
             )
@@ -165,12 +160,13 @@ class MedicalIdViewModel(
             chronicConditions = current.conditionsInput,
             emergencyContactName = current.emergencyContactNameInput,
             emergencyContactRelation = current.emergencyContactRelationInput,
-            isEncrypted = current.isLocked
+            isEncrypted = true
         )
         medicalIdRepository.updateMedicalRecord(updatedRecord)
         _uiState.update { 
             it.copy(
                 isEditing = false,
+                isLocked = false,
                 isSavedSuccess = true
             ) 
         }

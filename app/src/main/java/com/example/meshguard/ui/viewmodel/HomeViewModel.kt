@@ -93,7 +93,7 @@ class HomeViewModel @JvmOverloads constructor(
         val age = currentPacket.medicalData.age
 
         if (name.isBlank() || age <= 0) {
-            _warningMessage.value = "Please complete Name and Age in Medical ID before broadcasting SOS."
+            _warningMessage.value = "Please complete Name and Age in Medical Profile before broadcasting SOS."
             meshRepository.toggleBroadcast(false)
             // Step 9: Stop the foreground service if the broadcast is being turned off due to
             // profile validation failure.

@@ -451,7 +451,7 @@ private fun MedicalProfileCard(survivor: SurvivorPacket) {
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "MEDICAL ID & IDENTITY",
+                        text = "MEDICAL PROFILE & IDENTITY",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp,

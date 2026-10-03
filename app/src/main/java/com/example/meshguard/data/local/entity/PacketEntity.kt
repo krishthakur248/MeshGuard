@@ -75,13 +75,35 @@ data class PacketEntity(
             MedicalRecord(name = survivorName)
         }
 
+        val (historyList, sig) = try {
+            val medObj = JSONObject(medicalDataJson)
+            val historyArray = medObj.optJSONArray("historyNodes")
+            val list = mutableListOf<HistoryNode>()
+            if (historyArray != null) {
+                for (i in 0 until historyArray.length()) {
+                    val nodeObj = historyArray.getJSONObject(i)
+                    list.add(
+                        HistoryNode(
+                            deviceAlias = nodeObj.optString("deviceAlias", "Relay Node"),
+                            lastSeenTimestamp = nodeObj.optLong("lastSeenTimestamp", System.currentTimeMillis()),
+                            signalStrengthRssi = nodeObj.optInt("signalStrengthRssi", -70),
+                            hopIndex = nodeObj.optInt("hopIndex", i)
+                        )
+                    )
+                }
+            }
+            Pair(list, medObj.optString("signature", ""))
+        } catch (e: Exception) {
+            Pair(emptyList<HistoryNode>(), "")
+        }
+
         return SurvivorPacket(
             packetId = packetId,
             survivorId = survivorId,
             survivorName = survivorName,
             statusTag = status,
             medicalData = medRecord,
-            historyNodes = emptyList(),
+            historyNodes = historyList,
             timestamp = timestamp,
             priority = if (isAcknowledged) priority + 10 else priority,
             hopCount = hopCount,
@@ -91,7 +113,8 @@ data class PacketEntity(
             longitude = longitude,
             locationAccuracy = locationAccuracy,
             locationCapturedAt = locationCapturedAt,
-            isAcknowledged = isAcknowledged
+            isAcknowledged = isAcknowledged,
+            signature = sig
         )
     }
 
@@ -107,6 +130,18 @@ data class PacketEntity(
             med.put("emergencyContactRelation", packet.medicalData.emergencyContactRelation)
             med.put("isEncrypted", packet.medicalData.isEncrypted)
             med.put("encryptedPayloadPreview", packet.medicalData.encryptedPayloadPreview)
+
+            val nodesArray = JSONArray()
+            for (node in packet.historyNodes) {
+                val nodeObj = JSONObject()
+                nodeObj.put("deviceAlias", node.deviceAlias)
+                nodeObj.put("lastSeenTimestamp", node.lastSeenTimestamp)
+                nodeObj.put("signalStrengthRssi", node.signalStrengthRssi)
+                nodeObj.put("hopIndex", node.hopIndex)
+                nodesArray.put(nodeObj)
+            }
+            med.put("historyNodes", nodesArray)
+            med.put("signature", packet.signature)
 
             return PacketEntity(
                 survivorId = packet.survivorId,

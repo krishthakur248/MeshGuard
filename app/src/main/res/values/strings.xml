@@ -25,7 +25,7 @@
     <!-- Navigation Titles -->
     <string name="nav_home">SOS Beacon</string>
     <string name="nav_status">Status Picker</string>
-    <string name="nav_medical">Medical ID</string>
+    <string name="nav_medical">Medical Profile</string>
     <string name="nav_mesh">Mesh Network</string>
     <string name="nav_chat">Mesh Messages</string>
     <string name="nav_breadcrumbs">Proximity Chain</string>
@@ -61,7 +61,7 @@
     <string name="onboarding_slide2_title">Every Device is a Data Mule.</string>
     <string name="onboarding_slide2_desc">Distress signals and messages hop phone-to-phone through the crowd until they reach first responders.</string>
     <string name="onboarding_slide3_title">Zero Internet. Zero Tracking.</string>
-    <string name="onboarding_slide3_desc">Built purely for disaster resilience. No tracking, minimal battery draw, and encrypted survivor medical IDs.</string>
+    <string name="onboarding_slide3_desc">Built purely for disaster resilience. No tracking, minimal battery draw, and encrypted survivor medical profiles.</string>
 
     <!-- Component Strings -->
     <string name="peer_direct_tag">DIRECT</string>

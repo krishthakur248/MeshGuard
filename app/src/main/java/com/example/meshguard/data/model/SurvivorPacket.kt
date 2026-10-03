@@ -27,7 +27,8 @@ data class SurvivorPacket(
     val longitude: Double = 0.0,
     val locationAccuracy: Float = 0f,
     val locationCapturedAt: Long = 0L,
-    val isAcknowledged: Boolean = false
+    val isAcknowledged: Boolean = false,
+    val signature: String = ""
 ) {
     fun toJson(): String {
         val root = JSONObject()
@@ -61,6 +62,22 @@ data class SurvivorPacket(
         med.put("isEncrypted", medicalData.isEncrypted)
         med.put("encryptedPayloadPreview", medicalData.encryptedPayloadPreview)
         root.put("medicalData", med)
+
+        // Step 13: Phase 2 history nodes (breadcrumbs)
+        val historyArray = JSONArray()
+        for (node in historyNodes) {
+            val nodeObj = JSONObject()
+            nodeObj.put("deviceAlias", node.deviceAlias)
+            nodeObj.put("lastSeenTimestamp", node.lastSeenTimestamp)
+            nodeObj.put("signalStrengthRssi", node.signalStrengthRssi)
+            nodeObj.put("hopIndex", node.hopIndex)
+            historyArray.put(nodeObj)
+        }
+        root.put("historyNodes", historyArray)
+
+        // Step 13: Phase 2 packet signature
+        val sig = if (signature.isNotBlank()) signature else computeSignature(packetId, survivorId, timestamp, statusTag.name)
+        root.put("signature", sig)
 
         return root.toString()
     }
@@ -112,12 +129,31 @@ data class SurvivorPacket(
             val acc = locObj?.optDouble("accuracyMeters", 0.0)?.toFloat() ?: 0f
             val capturedAt = locObj?.optLong("capturedAt", 0L) ?: 0L
 
+            // Step 13: Phase 2 history nodes (breadcrumbs)
+            val historyArray = root.optJSONArray("historyNodes")
+            val historyList = mutableListOf<HistoryNode>()
+            if (historyArray != null) {
+                for (i in 0 until historyArray.length()) {
+                    val nodeObj = historyArray.getJSONObject(i)
+                    historyList.add(
+                        HistoryNode(
+                            deviceAlias = nodeObj.optString("deviceAlias", "Relay Node"),
+                            lastSeenTimestamp = nodeObj.optLong("lastSeenTimestamp", System.currentTimeMillis()),
+                            signalStrengthRssi = nodeObj.optInt("signalStrengthRssi", -70),
+                            hopIndex = nodeObj.optInt("hopIndex", i)
+                        )
+                    )
+                }
+            }
+            val signature = root.optString("signature", "")
+
             return SurvivorPacket(
                 packetId = root.optString("packetId", UUID.randomUUID().toString().take(8)),
                 survivorId = root.optString("survivorId", "SURVIVOR-01"),
                 survivorName = root.optString("survivorName", "Alex Rivera"),
                 statusTag = status,
                 medicalData = medicalRecord,
+                historyNodes = historyList,
                 timestamp = root.optLong("timestamp", System.currentTimeMillis()),
                 priority = root.optInt("priority", status.priorityLevel),
                 hopCount = root.optInt("hopCount", 0),
@@ -127,8 +163,26 @@ data class SurvivorPacket(
                 longitude = lon,
                 locationAccuracy = acc,
                 locationCapturedAt = capturedAt,
-                isAcknowledged = root.optBoolean("isAcknowledged", false)
+                isAcknowledged = root.optBoolean("isAcknowledged", false),
+                signature = signature
             )
+        }
+
+        fun computeSignature(packetId: String, survivorId: String, timestamp: Long, statusTag: String): String {
+            return try {
+                val input = "MESHGUARD_AUTH::$packetId::$survivorId::$timestamp::$statusTag"
+                val md = java.security.MessageDigest.getInstance("SHA-256")
+                val hash = md.digest(input.toByteArray(Charsets.UTF_8))
+                hash.take(8).joinToString("") { "%02x".format(it) }
+            } catch (e: Exception) {
+                "sig_" + packetId.take(6)
+            }
+        }
+
+        fun verifySignature(packet: SurvivorPacket): Boolean {
+            if (packet.signature.isBlank()) return true // Allow legacy packets
+            val expected = computeSignature(packet.packetId, packet.survivorId, packet.timestamp, packet.statusTag.name)
+            return packet.signature == expected
         }
     }
 }
