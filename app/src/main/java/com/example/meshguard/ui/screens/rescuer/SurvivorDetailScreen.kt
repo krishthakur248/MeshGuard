@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -58,6 +59,8 @@ import com.example.meshguard.R
 import com.example.meshguard.data.model.SurvivorPacket
 import com.example.meshguard.data.model.UrgencyStatus
 import com.example.meshguard.ui.components.EmptyState
+import com.example.meshguard.ui.components.OsmMapView
+import com.example.meshguard.ui.screens.rescuer.getTintedMarkerDrawable
 import com.example.meshguard.ui.theme.ColorBackgroundDark
 import com.example.meshguard.ui.theme.ColorSurfaceBorder
 import com.example.meshguard.ui.theme.ColorSurfaceDark
@@ -72,6 +75,8 @@ import com.example.meshguard.ui.theme.TextMuted
 import com.example.meshguard.ui.theme.TextPrimary
 import com.example.meshguard.ui.theme.TextSecondary
 import com.example.meshguard.ui.viewmodel.SurvivorDetailViewModel
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.overlay.Marker
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -296,6 +301,8 @@ private fun StatusBannerCard(survivor: SurvivorPacket) {
 
 @Composable
 private fun LocationAndMeshCard(survivor: SurvivorPacket) {
+    val context = LocalContext.current
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -353,6 +360,34 @@ private fun LocationAndMeshCard(survivor: SurvivorPacket) {
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                 }
+
+                // Step 11 — Map 1: Mini-map showing the survivor's exact location
+                val geoPoint = GeoPoint(survivor.latitude, survivor.longitude)
+                OsmMapView(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(1.dp, MeshCyan.copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
+                    initialCenter = geoPoint,
+                    initialZoom = 15.0,
+                    enableRotation = false,
+                    onMapReady = { mapView ->
+                        // Single marker at the survivor's location
+                        val marker = Marker(mapView).apply {
+                            position = geoPoint
+                            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                            title = survivor.survivorName.ifBlank { "Survivor" }
+                            snippet = survivor.statusTag.label
+                            icon = getTintedMarkerDrawable(context, survivor.statusTag)
+                            infoWindow = null
+                        }
+                        mapView.overlays.add(marker)
+                        mapView.invalidate()
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
             } else {
                 Surface(
                     shape = RoundedCornerShape(6.dp),

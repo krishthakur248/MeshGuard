@@ -59,6 +59,8 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
+    // Step 11: osmdroid — offline OpenStreetMap tiles, no API key, works without internet.
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

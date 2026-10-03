@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SensorsOff
 import androidx.compose.material.icons.filled.Shield
@@ -33,6 +34,8 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -80,6 +83,7 @@ import com.example.meshguard.ui.viewmodel.UrgencyFilter
 @Composable
 fun ResponderDashboardRoute(
     onNavigateToSurvivorDetail: (String) -> Unit,
+    onNavigateToMap: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: ResponderDashboardViewModel = viewModel()
 ) {
@@ -91,6 +95,7 @@ fun ResponderDashboardRoute(
         onSearchQueryChanged = viewModel::onSearchQueryChanged,
         onSurvivorClick = onNavigateToSurvivorDetail,
         onClearQueue = viewModel::clearQueue,
+        onNavigateToMap = onNavigateToMap,
         modifier = modifier
     )
 }
@@ -102,6 +107,7 @@ fun ResponderDashboardScreen(
     onSearchQueryChanged: (String) -> Unit,
     onSurvivorClick: (String) -> Unit,
     onClearQueue: () -> Unit,
+    onNavigateToMap: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showClearDialog by remember { mutableStateOf(false) }
@@ -143,21 +149,23 @@ fun ResponderDashboardScreen(
         )
     }
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(ColorBackgroundDark)
-            .padding(horizontal = 16.dp)
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Tactical Header: Incident Command
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Tactical Header: Incident Command
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Box(
                     modifier = Modifier
                         .size(40.dp)
@@ -174,78 +182,83 @@ fun ResponderDashboardScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(10.dp))
 
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.nav_responder_dashboard),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = TextPrimary,
+                        maxLines = 1
                     )
                     Text(
                         text = "INCIDENT COMMAND • OFFLINE MESH",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 1.sp,
-                        color = RescuerBadgeBlue
+                        letterSpacing = 0.5.sp,
+                        color = RescuerBadgeBlue,
+                        maxLines = 1
                     )
                 }
-            }
 
-            // Radio Peer Indicator Pill
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = ColorSurfaceDark,
-                border = androidx.compose.foundation.BorderStroke(1.dp, ColorSurfaceBorder)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Radio Peer Indicator Pill
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = ColorSurfaceDark,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, ColorSurfaceBorder)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(if (uiState.peerCount > 0) EmergencyGreen else TextMuted)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "${uiState.peerCount} PEERS",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = TextSecondary
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(if (uiState.peerCount > 0) EmergencyGreen else TextMuted)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "${uiState.peerCount} PEERS",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = TextSecondary,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        // Triage Stats Cards Row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            TriageStatCard(
-                label = "ACTIVE QUEUE",
-                value = uiState.activeSurvivors.size.toString(),
-                accentColor = MeshCyan,
-                modifier = Modifier.weight(1f)
-            )
-            TriageStatCard(
-                label = "CRITICAL",
-                value = uiState.criticalCount.toString(),
-                accentColor = EmergencyRed,
-                modifier = Modifier.weight(1f)
-            )
-            TriageStatCard(
-                label = "HANDLED",
-                value = uiState.acknowledgedSurvivors.size.toString(),
-                accentColor = EmergencyGreen,
-                modifier = Modifier.weight(1f)
-            )
-        }
+            // Triage Stats Cards Row — 3 cards: Active, Critical, Handled
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TriageStatCard(
+                    label = "ACTIVE",
+                    value = uiState.activeSurvivors.size.toString(),
+                    accentColor = MeshCyan,
+                    modifier = Modifier.weight(1f)
+                )
+                TriageStatCard(
+                    label = "CRITICAL",
+                    value = uiState.criticalCount.toString(),
+                    accentColor = EmergencyRed,
+                    modifier = Modifier.weight(1f)
+                )
+                TriageStatCard(
+                    label = "HANDLED",
+                    value = uiState.acknowledgedSurvivors.size.toString(),
+                    accentColor = EmergencyGreen,
+                    modifier = Modifier.weight(1f)
+                )
+            }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -396,7 +409,7 @@ fun ResponderDashboardScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(bottom = 16.dp),
+                contentPadding = PaddingValues(bottom = 88.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // 1. ACTIVE / PENDING CASUALTIES SECTION
@@ -466,6 +479,29 @@ fun ResponderDashboardScreen(
                     }
                 }
             }
+        }
+    }
+
+        // Circular floating map button on bottom right, directly above the Mesh Messages tab
+        FloatingActionButton(
+            onClick = onNavigateToMap,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 16.dp),
+            shape = CircleShape,
+            containerColor = RescuerBadgeBlue,
+            contentColor = Color.White,
+            elevation = FloatingActionButtonDefaults.elevation(
+                defaultElevation = 6.dp,
+                pressedElevation = 10.dp
+            )
+        ) {
+            Icon(
+                imageVector = Icons.Default.Map,
+                contentDescription = "Open Survivor Map",
+                tint = Color.White,
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 }

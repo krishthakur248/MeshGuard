@@ -19,6 +19,7 @@ sealed class Screen(val route: String) {
 
     // Responder / Rescue Worker Screens
     data object ResponderDashboard : Screen("responder_dashboard")
+    data object RescuerMap : Screen("rescuer_map")   // Step 11
     data object SurvivorDetail : Screen("survivor_detail/{survivorId}") {
         const val ARG_SURVIVOR_ID = "survivorId"
         fun createRoute(survivorId: String): String = "survivor_detail/$survivorId"

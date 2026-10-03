@@ -42,6 +42,7 @@ import com.example.meshguard.ui.screens.survivor.MedicalIdRoute
 import com.example.meshguard.ui.screens.survivor.MeshNetworkRoute
 import com.example.meshguard.ui.screens.rescuer.ResponderDashboardRoute
 import com.example.meshguard.ui.screens.rescuer.SurvivorDetailRoute
+import com.example.meshguard.ui.screens.rescuer.SurvivorMapRoute
 import com.example.meshguard.ui.screens.survivor.StatusPickerScreen
 import com.example.meshguard.ui.theme.ColorBackgroundDark
 import com.example.meshguard.ui.theme.ColorSurfaceDark
@@ -220,6 +221,27 @@ fun MeshGuardNavGraph(
                     }
                 } else {
                     ResponderDashboardRoute(
+                        onNavigateToSurvivorDetail = { survivorId ->
+                            navController.navigate(Screen.SurvivorDetail.createRoute(survivorId))
+                        },
+                        onNavigateToMap = {
+                            navController.navigate(Screen.RescuerMap.route)
+                        }
+                    )
+                }
+            }
+
+            // Step 11: Full-screen overview map (all survivors)
+            composable(Screen.RescuerMap.route) {
+                if (userRole != UserRole.RESCUER) {
+                    androidx.compose.runtime.LaunchedEffect(Unit) {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Home.route) { inclusive = true }
+                        }
+                    }
+                } else {
+                    SurvivorMapRoute(
+                        onNavigateBack = { navController.popBackStack() },
                         onNavigateToSurvivorDetail = { survivorId ->
                             navController.navigate(Screen.SurvivorDetail.createRoute(survivorId))
                         }
